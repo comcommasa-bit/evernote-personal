@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppThemeMode { white, dark, purple, blue, orange }
 
@@ -89,8 +90,23 @@ class ThemeNotifier extends ChangeNotifier {
   AppThemeMode get mode => _mode;
   AppColors get colors => AppThemeData.of(_mode);
 
-  void setMode(AppThemeMode m) {
+  /// 起動時に保存済みテーマを読み込む
+  Future<void> loadSavedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('app_theme');
+    if (name != null) {
+      final saved = AppThemeMode.values.where((e) => e.name == name);
+      if (saved.isNotEmpty) {
+        _mode = saved.first;
+        notifyListeners();
+      }
+    }
+  }
+
+  void setMode(AppThemeMode m) async {
     _mode = m;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_theme', m.name);
   }
 }

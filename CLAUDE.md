@@ -13,7 +13,7 @@ Evernoteライクな個人用メモアプリ。紫のカバ（hippo）をマス�
 - **状態管理**: Provider (`ChangeNotifierProvider` + `ThemeNotifier`)
 - **DB**: sqflite（ローカルSQLite）
 - **認証**: local_auth（生体認証）、flutter_secure_storage（パスワード保存）
-- **その他**: uuid, image_picker, path_provider
+- **その他**: uuid, image_picker, path_provider, shared_preferences, file_picker
 
 ## ディレクトリ構成
 
@@ -31,6 +31,7 @@ lib/
     lock_screen.dart     # パスワード入力 + 指紋認証
     home_screen.dart     # サイドバー + ノート一覧（検索、ソート、フォルダ/タグ管理）
     note_editor_screen.dart  # ノート編集（タイトル、本文、タグ、画像、ピン留め）
+    settings_screen.dart     # 設定（テーマ切替、パスワード変更、エクスポート/インポート）
 assets/
   images/
     hippo.png            # アプリアイコン（紫カバ）

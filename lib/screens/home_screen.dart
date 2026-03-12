@@ -7,6 +7,7 @@ import '../models/note.dart';
 import '../models/folder.dart';
 import '../models/tag.dart';
 import 'note_editor_screen.dart';
+import 'settings_screen.dart';
 
 const _uuid = Uuid();
 
@@ -477,6 +478,14 @@ class _NoteList extends StatelessWidget {
               itemBuilder: (_) => SortMode.values.map((s) =>
                 PopupMenuItem(value: s, child: Text(_sortLabel(s),
                   style: TextStyle(fontSize: 13, color: c.text)))).toList(),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.settings_outlined, size: 18, color: c.subtext),
+              onPressed: () => Navigator.push(ctx,
+                MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ]),
         ),

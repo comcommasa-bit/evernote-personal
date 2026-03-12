@@ -17,6 +17,8 @@ dependencies:
   path_provider: ^2.1.2
   local_auth: ^2.1.8
   flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.2
+  file_picker: ^6.1.1
 
 dev_dependencies:
   flutter_test:
