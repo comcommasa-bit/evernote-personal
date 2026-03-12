@@ -1,0 +1,35 @@
+name: evernote_personal
+description: A personal note-taking app inspired by Evernote.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  provider: ^6.1.1
+  uuid: ^4.2.1
+  image_picker: ^1.0.7
+  path_provider: ^2.1.2
+  local_auth: ^2.1.8
+  flutter_secure_storage: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-Regular.ttf
+        - asset: assets/fonts/NotoSansJP-Bold.ttf
+          weight: 700
+  assets:
+    - assets/images/
