@@ -74,7 +74,7 @@ class _LockScreenState extends State<LockScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(34),
                     boxShadow: [BoxShadow(
-                      color: const Color(0xFF6C3CBF).withOpacity(0.18),
+                      color: const Color(0xFF6C3CBF).withValues(alpha: 0.18),
                       blurRadius: 28, offset: const Offset(0, 8),
                     )],
                   ),
@@ -142,8 +142,8 @@ class _LockScreenState extends State<LockScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [BoxShadow(
                           color: _fpActive
-                              ? const Color(0xFF4A90E8).withOpacity(0.4)
-                              : Colors.black.withOpacity(0.10),
+                              ? const Color(0xFF4A90E8).withValues(alpha: 0.4)
+                              : Colors.black.withValues(alpha: 0.10),
                           blurRadius: _fpActive ? 12 : 6,
                           spreadRadius: _fpActive ? 2 : 0,
                         )],
@@ -186,7 +186,7 @@ class _LockScreenState extends State<LockScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         elevation: 4,
-                        shadowColor: const Color(0xFF4A80E8).withOpacity(0.4),
+                        shadowColor: const Color(0xFF4A80E8).withValues(alpha: 0.4),
                       ),
                       child: const Text('Continue',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),

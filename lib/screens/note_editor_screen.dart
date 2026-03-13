@@ -102,8 +102,13 @@ class _NoteEditorState extends State<NoteEditorScreen> {
     final fmtDate = (DateTime d) =>
         '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
-    return WillPopScope(
-      onWillPop: () async { if (_changed) await _save(); return true; },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (_changed) await _save();
+        if (mounted) Navigator.of(context).pop();
+      },
       child: Scaffold(
         backgroundColor: c.card,
         appBar: AppBar(
@@ -195,7 +200,7 @@ class _NoteEditorState extends State<NoteEditorScreen> {
               Icon(Icons.update, size: 10, color: c.accent),
               const SizedBox(width: 2),
               Text('更新 ${fmtDate(_note.updatedAt)}',
-                style: TextStyle(fontSize: 10, color: c.accent.withOpacity(0.8))),
+                style: TextStyle(fontSize: 10, color: c.accent.withValues(alpha: 0.8))),
             ]),
           ),
 

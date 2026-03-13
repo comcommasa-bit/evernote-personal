@@ -79,7 +79,6 @@ class AppThemeData {
         surface: c.card, onSurface: c.text,
         error: Colors.red, onError: Colors.white,
       ),
-      fontFamily: 'NotoSansJP',
     );
   }
 }

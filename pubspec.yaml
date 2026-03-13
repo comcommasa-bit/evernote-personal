@@ -17,6 +17,7 @@ dependencies:
   path_provider: ^2.1.2
   local_auth: ^2.1.8
   flutter_secure_storage: ^9.0.0
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -25,11 +26,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: NotoSansJP
-      fonts:
-        - asset: assets/fonts/NotoSansJP-Regular.ttf
-        - asset: assets/fonts/NotoSansJP-Bold.ttf
-          weight: 700
   assets:
     - assets/images/
