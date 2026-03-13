@@ -69,20 +69,28 @@ class _LockScreenState extends State<LockScreen> {
               children: [
                 // ── アプリアイコン ──
                 Container(
-                  width: 150, height: 150,
+                  width: 180, height: 180,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(34),
+                    color: const Color(0xFF7B4DBF),
+                    borderRadius: BorderRadius.circular(40),
                     boxShadow: [BoxShadow(
-                      color: const Color(0xFF6C3CBF).withOpacity(0.18),
-                      blurRadius: 28, offset: const Offset(0, 8),
+                      color: const Color(0xFF6C3CBF).withOpacity(0.25),
+                      blurRadius: 32, offset: const Offset(0, 10),
                     )],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(34),
-                    child: Image.asset(
-                      'assets/images/hippo.png',
-                      fit: BoxFit.contain,
+                    borderRadius: BorderRadius.circular(40),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Image.asset(
+                        'assets/images/hippo.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.pets,
+                          size: 80,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),

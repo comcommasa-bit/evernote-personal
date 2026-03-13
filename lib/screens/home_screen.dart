@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final c = ctx.watch<ThemeNotifier>().colors;
     return Scaffold(
       backgroundColor: c.bg,
-      body: Row(children: [
+      body: SafeArea(child: Row(children: [
         _Sidebar(
           colors: c, folders: _folders, tags: _tags,
           activeFolderId: _activeFolderId, showTrash: _showTrash,
@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onNewNote: _newNote,
           count: _filtered.length,
         ),
-      ]),
+      ])),
     );
   }
 }
@@ -178,7 +178,7 @@ class _SidebarState extends State<_Sidebar> {
   @override
   Widget build(BuildContext ctx) {
     return Container(
-      width: 200,
+      width: 240,
       color: c.sidebar,
       child: Column(children: [
         // Header
