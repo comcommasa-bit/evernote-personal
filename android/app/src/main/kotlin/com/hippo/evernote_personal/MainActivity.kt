@@ -1,4 +1,4 @@
-package com.example.evernote_personal
+package com.hippo.evernote_personal
 
 import io.flutter.embedding.android.FlutterActivity
 
