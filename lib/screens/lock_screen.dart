@@ -63,7 +63,7 @@ class _LockScreenState extends State<LockScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 40).copyWith(top: 48, bottom: 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
