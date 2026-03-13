@@ -71,7 +71,7 @@ class _LockScreenState extends State<LockScreen> {
                 Container(
                   width: 150, height: 150,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFFF0EEEA),
                     borderRadius: BorderRadius.circular(34),
                     boxShadow: [BoxShadow(
                       color: const Color(0xFF6C3CBF).withValues(alpha: 0.18),
