@@ -702,8 +702,9 @@ class _EditTileState extends State<_EditTile> {
           IconButton(
               icon: Icon(Icons.check, size: 14, color: widget.c.accent),
               onPressed: () {
-                if (_ctrl.text.trim().isNotEmpty)
+                if (_ctrl.text.trim().isNotEmpty) {
                   widget.onConfirm(_ctrl.text.trim());
+                }
               },
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints()),

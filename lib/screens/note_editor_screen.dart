@@ -89,17 +89,17 @@ class _NoteEditorState extends State<NoteEditorScreen> {
   }
 
   String _tagName(String id) => widget.tags
-      .firstWhere((t) => t.id == id, orElse: () => Tag(id: '', name: ''))
+      .firstWhere((t) => t.id == id, orElse: () => const Tag(id: '', name: ''))
       .name;
 
   String _folderName(String id) => widget.folders
-      .firstWhere((f) => f.id == id, orElse: () => Folder(id: '', name: ''))
+      .firstWhere((f) => f.id == id, orElse: () => const Folder(id: '', name: ''))
       .name;
 
   @override
   Widget build(BuildContext ctx) {
     final c = ctx.watch<ThemeNotifier>().colors;
-    final fmtDate = (DateTime d) =>
+    String fmtDate(DateTime d) =>
         '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
     return PopScope(
