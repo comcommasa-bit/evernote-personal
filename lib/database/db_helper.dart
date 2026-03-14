@@ -38,10 +38,14 @@ class DbHelper {
         )
       ''');
       // デフォルトフォルダ
-      await db.insert('folders', {'id': 'f_work',    'name': '仕事',         'sort_order': 0});
-      await db.insert('folders', {'id': 'f_private', 'name': 'プライベート', 'sort_order': 1});
-      await db.insert('folders', {'id': 'f_invest',  'name': '投資',         'sort_order': 2});
-      await db.insert('folders', {'id': 'f_novel',   'name': '小説',         'sort_order': 3});
+      await db.insert('folders',
+          {'id': 'f_work', 'name': '仕事', 'sort_order': 0});
+      await db.insert('folders',
+          {'id': 'f_private', 'name': 'プライベート', 'sort_order': 1});
+      await db.insert('folders',
+          {'id': 'f_invest', 'name': '投資', 'sort_order': 2});
+      await db.insert('folders',
+          {'id': 'f_novel', 'name': '小説', 'sort_order': 3});
       // デフォルトタグ
       await db.insert('tags', {'id': 't1', 'name': '重要'});
       await db.insert('tags', {'id': 't2', 'name': 'TODO'});
@@ -52,7 +56,8 @@ class DbHelper {
 
   // ── Folders ────────────────────────────
   Future<List<Folder>> getFolders() async {
-    final rows = await (await db).query('folders', orderBy: 'sort_order ASC');
+    final rows =
+        await (await db).query('folders', orderBy: 'sort_order ASC');
     return rows.map(Folder.fromMap).toList();
   }
 
@@ -60,7 +65,8 @@ class DbHelper {
       (await db).insert('folders', f.toMap());
 
   Future<void> updateFolder(Folder f) async =>
-      (await db).update('folders', f.toMap(), where: 'id=?', whereArgs: [f.id]);
+      (await db).update('folders', f.toMap(),
+          where: 'id=?', whereArgs: [f.id]);
 
   Future<void> deleteFolder(String id) async =>
       (await db).delete('folders', where: 'id=?', whereArgs: [id]);
@@ -84,7 +90,8 @@ class DbHelper {
       (await db).insert('tags', t.toMap());
 
   Future<void> updateTag(Tag t) async =>
-      (await db).update('tags', t.toMap(), where: 'id=?', whereArgs: [t.id]);
+      (await db).update('tags', t.toMap(),
+          where: 'id=?', whereArgs: [t.id]);
 
   Future<void> deleteTag(String id) async =>
       (await db).delete('tags', where: 'id=?', whereArgs: [id]);
@@ -100,7 +107,8 @@ class DbHelper {
   }
 
   Future<Note?> getNoteById(String id) async {
-    final rows = await (await db).query('notes', where: 'id=?', whereArgs: [id]);
+    final rows =
+        await (await db).query('notes', where: 'id=?', whereArgs: [id]);
     return rows.isEmpty ? null : Note.fromMap(rows.first);
   }
 
@@ -108,16 +116,36 @@ class DbHelper {
       (await db).insert('notes', n.toMap());
 
   Future<void> updateNote(Note n) async =>
-      (await db).update('notes', n.toMap(), where: 'id=?', whereArgs: [n.id]);
+      (await db).update('notes', n.toMap(),
+          where: 'id=?', whereArgs: [n.id]);
 
   Future<void> softDeleteNote(String id) async =>
-      (await db).update('notes', {'is_deleted': 1}, where: 'id=?', whereArgs: [id]);
+      (await db).update('notes', {'is_deleted': 1},
+          where: 'id=?', whereArgs: [id]);
 
   Future<void> restoreNote(String id) async =>
-      (await db).update('notes', {'is_deleted': 0}, where: 'id=?', whereArgs: [id]);
+      (await db).update('notes', {'is_deleted': 0},
+          where: 'id=?', whereArgs: [id]);
 
   Future<void> hardDeleteNote(String id) async =>
       (await db).delete('notes', where: 'id=?', whereArgs: [id]);
+
+  /// ゴミ箱をすべて空にする（完全削除）
+  Future<void> emptyTrash() async =>
+      (await db).delete('notes', where: 'is_deleted=1');
+
+  /// 30日以上前にソフトデリートされたノートを自動削除
+  /// updated_at を削除日として扱う（ソフトデリート時に updated_at が更新される想定）
+  Future<int> deleteExpiredNotes() async {
+    final cutoff = DateTime.now()
+        .subtract(const Duration(days: 30))
+        .toIso8601String();
+    return (await db).delete(
+      'notes',
+      where: 'is_deleted=1 AND updated_at < ?',
+      whereArgs: [cutoff],
+    );
+  }
 
   Future<List<Note>> searchNotes(String q) async {
     final rows = await (await db).query(
@@ -132,14 +160,14 @@ class DbHelper {
   // ── Export / Import ────────────────────
   Future<Map<String, dynamic>> exportAll() async {
     final folders = await getFolders();
-    final tags    = await getTags();
-    final notes   = await getNotes(includeDeleted: true);
+    final tags = await getTags();
+    final notes = await getNotes(includeDeleted: true);
     return {
       'version': 1,
       'exported_at': DateTime.now().toIso8601String(),
       'folders': folders.map((f) => f.toMap()).toList(),
-      'tags':    tags.map((t) => t.toMap()).toList(),
-      'notes':   notes.map((n) => n.toMap()).toList(),
+      'tags': tags.map((t) => t.toMap()).toList(),
+      'notes': notes.map((n) => n.toMap()).toList(),
     };
   }
 

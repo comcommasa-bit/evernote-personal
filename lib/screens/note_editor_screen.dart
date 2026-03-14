@@ -39,6 +39,8 @@ class _NoteEditorState extends State<NoteEditorScreen> {
   late Note _note;
   bool _changed = false;
   bool _isPreview = false;
+  /// 新規ノートかどうか（空なら閉じる時に削除する）
+  bool _isNewNote = false;
 
   @override
   void initState() {
@@ -46,6 +48,10 @@ class _NoteEditorState extends State<NoteEditorScreen> {
     _note = widget.note;
     _titleCtrl = TextEditingController(text: _note.title);
     _bodyCtrl = TextEditingController(text: _note.body);
+    // タイトルも本文も画像もない場合は「新規の空ノート」とみなす
+    _isNewNote = _note.title.isEmpty &&
+        _note.body.isEmpty &&
+        _note.imagePaths.isEmpty;
   }
 
   @override
@@ -230,7 +236,17 @@ class _NoteEditorState extends State<NoteEditorScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        if (_changed) await _save();
+        final title = _titleCtrl.text.trim();
+        final body = _bodyCtrl.text.trim();
+        final hasContent =
+            title.isNotEmpty || body.isNotEmpty || _note.imagePaths.isNotEmpty;
+        if (_isNewNote && !hasContent) {
+          // 空の新規ノートは保存せず削除して戻る
+          await _db.hardDeleteNote(_note.id);
+          widget.onSaved(_note);
+        } else if (_changed) {
+          await _save();
+        }
         if (mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
