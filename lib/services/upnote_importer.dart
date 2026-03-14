@@ -56,15 +56,10 @@ class UpNoteImporter {
       if (!file.name.endsWith('.md')) continue;
 
       final content = utf8.decode(file.content as List<int>, allowMalformed: true);
-      final parsed = _parseFrontmatter(content);
+      final parsed = _parseContent(content, file.name);
 
-      final body = parsed['body'] as String? ?? '';
-      // タイトル優先順: フロントマター > 本文の見出し > ファイル名
-      final fmTitle = parsed['title'] as String?;
-      final headingMatch = RegExp(r'^#{1,3}\s+(.+)', multiLine: true).firstMatch(body);
-      final title = (fmTitle != null && fmTitle.isNotEmpty)
-          ? fmTitle
-          : headingMatch?.group(1)?.trim() ?? _titleFromPath(file.name);
+      final title = parsed['title'] as String;
+      final body = parsed['body'] as String;
       final notebook = parsed['notebook'] as String? ?? '';
       final tagNames = parsed['tags'] as List<String>? ?? [];
       final createdStr = parsed['created'] as String? ?? '';
@@ -134,61 +129,84 @@ class UpNoteImporter {
   // private helpers
   // ──────────────────────────────────────────
 
-  /// YAMLフロントマターを解析してマップに返す
-  Map<String, dynamic> _parseFrontmatter(String content) {
-    if (!content.startsWith('---')) return {'body': content};
-
-    final end = content.indexOf('\n---', 3);
-    if (end == -1) return {'body': content};
-
-    final fm = content.substring(3, end).trim();
-    final body = content.substring(end + 4).trim();
-
-    final result = <String, dynamic>{'body': body};
-    final tags = <String>[];
-    bool inTags = false;
-
-    for (final line in fm.split('\n')) {
-      // タグのリスト行 (  - tagname)
-      if (inTags && line.startsWith('  - ')) {
-        tags.add(line.substring(4).trim().replaceAll('"', ''));
-        continue;
-      }
-      inTags = false;
-
-      final colon = line.indexOf(':');
-      if (colon == -1) continue;
-
-      final key = line.substring(0, colon).trim();
-      final value = line.substring(colon + 1).trim().replaceAll('"', '');
-
-      switch (key) {
-        case 'title':
-          result['title'] = value;
-        case 'created':
-          result['created'] = value;
-        case 'updated':
-          result['updated'] = value;
-        case 'notebook':
-          result['notebook'] = value;
-        case 'tags':
-          if (value.startsWith('[')) {
-            // tags: [tag1, tag2]
-            final inner = value
-                .replaceAll('[', '')
-                .replaceAll(']', '');
-            tags.addAll(inner
-                .split(',')
-                .map((e) => e.trim().replaceAll('"', ''))
-                .where((e) => e.isNotEmpty));
-          } else if (value.isEmpty) {
-            inTags = true;
+  /// UpNote Markdownをパースして title/body/notebook/tags/created/updated を返す
+  /// YAMLフロントマター形式と <!-- comment --> 形式の両方に対応
+  Map<String, dynamic> _parseContent(String content, String filePath) {
+    // YAMLフロントマター形式 (---\n...\n---) の処理
+    if (content.startsWith('---')) {
+      final end = content.indexOf('\n---', 3);
+      if (end != -1) {
+        final fm = content.substring(3, end).trim();
+        final body = content.substring(end + 4).trim();
+        final result = <String, dynamic>{'body': body};
+        final tags = <String>[];
+        bool inTags = false;
+        for (final line in fm.split('\n')) {
+          if (inTags && line.startsWith('  - ')) {
+            tags.add(line.substring(4).trim().replaceAll('"', ''));
+            continue;
           }
+          inTags = false;
+          final colon = line.indexOf(':');
+          if (colon == -1) continue;
+          final key = line.substring(0, colon).trim();
+          final value = line.substring(colon + 1).trim().replaceAll('"', '');
+          switch (key) {
+            case 'title': result['title'] = value;
+            case 'created': result['created'] = value;
+            case 'updated': result['updated'] = value;
+            case 'notebook': result['notebook'] = value;
+            case 'tags':
+              if (value.startsWith('[')) {
+                tags.addAll(value.replaceAll('[', '').replaceAll(']', '')
+                    .split(',').map((e) => e.trim().replaceAll('"', '')).where((e) => e.isNotEmpty));
+              } else if (value.isEmpty) {
+                inTags = true;
+              }
+          }
+        }
+        if (tags.isNotEmpty) result['tags'] = tags;
+        result['title'] ??= _titleFromPath(filePath);
+        return result;
       }
     }
 
-    if (tags.isNotEmpty) result['tags'] = tags;
-    return result;
+    // UpNote コメント形式: ## タイトル + <!-- category: --> + <!-- tags: -->
+    final lines = content.split('\n');
+    String title = '';
+    String category = '';
+    final tags = <String>[];
+    String created = '';
+    String updated = '';
+    final bodyLines = <String>[];
+
+    for (final line in lines) {
+      if (line.startsWith('## ') && title.isEmpty) {
+        title = line.replaceFirst('## ', '').trim();
+      } else if (line.startsWith('# ') && title.isEmpty) {
+        title = line.replaceFirst('# ', '').trim();
+      } else if (line.contains('<!-- category:')) {
+        category = RegExp(r'<!--\s*category:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+      } else if (line.contains('<!-- tags:')) {
+        final t = RegExp(r'<!--\s*tags:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+        tags.addAll(t.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
+      } else if (line.contains('<!-- created:')) {
+        created = RegExp(r'<!--\s*created:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+      } else if (line.contains('<!-- updated:')) {
+        updated = RegExp(r'<!--\s*updated:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+      } else {
+        bodyLines.add(line);
+      }
+    }
+
+    return {
+      'title': title.isNotEmpty ? title : _titleFromPath(filePath),
+      'body': bodyLines.join('\n').trim(),
+      'notebook': category,
+      'tags': tags,
+      'created': created,
+      'updated': updated,
+    };
   }
 
   String _titleFromPath(String path) {
