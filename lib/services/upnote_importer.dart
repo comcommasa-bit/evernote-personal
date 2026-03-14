@@ -197,7 +197,7 @@ class UpNoteImporter {
 
     return {
       'title': title.isNotEmpty ? title : _titleFromPath(filePath),
-      'body': bodyLines.join('\n').trim(),
+      'body': bodyLines.join('\n').replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '[画像]').trim(),
       'notebook': notebook,
       'tags': tags,
       'created': created,

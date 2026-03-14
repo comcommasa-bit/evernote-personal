@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -17,8 +18,11 @@ class NoteEditorScreen extends StatefulWidget {
   final Function(Note) onSaved;
 
   const NoteEditorScreen({
-    super.key, required this.note, required this.folders,
-    required this.tags, required this.onSaved,
+    super.key,
+    required this.note,
+    required this.folders,
+    required this.tags,
+    required this.onSaved,
   });
 
   @override
@@ -26,19 +30,20 @@ class NoteEditorScreen extends StatefulWidget {
 }
 
 class _NoteEditorState extends State<NoteEditorScreen> {
-  final _db      = DbHelper();
-  final _picker  = ImagePicker();
+  final _db = DbHelper();
+  final _picker = ImagePicker();
   late final TextEditingController _titleCtrl;
   late final TextEditingController _bodyCtrl;
   late Note _note;
   bool _changed = false;
+  bool _isPreview = false;
 
   @override
   void initState() {
     super.initState();
-    _note     = widget.note;
+    _note = widget.note;
     _titleCtrl = TextEditingController(text: _note.title);
-    _bodyCtrl  = TextEditingController(text: _note.body);
+    _bodyCtrl = TextEditingController(text: _note.body);
   }
 
   @override
@@ -50,20 +55,21 @@ class _NoteEditorState extends State<NoteEditorScreen> {
 
   Future<void> _save() async {
     final updated = _note.copyWith(
-      title:     _titleCtrl.text,
-      body:      _bodyCtrl.text,
+      title: _titleCtrl.text,
+      body: _bodyCtrl.text,
       updatedAt: DateTime.now(),
     );
     await _db.updateNote(updated);
-    _note    = updated;
+    _note = updated;
     _changed = false;
     widget.onSaved(updated);
   }
 
   Future<void> _pickImage() async {
-    final xf = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final xf =
+        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (xf == null) return;
-    final dir  = await getApplicationDocumentsDirectory();
+    final dir = await getApplicationDocumentsDirectory();
     final dest = p.join(dir.path, 'note_images', p.basename(xf.path));
     await Directory(p.dirname(dest)).create(recursive: true);
     await File(xf.path).copy(dest);
@@ -76,7 +82,7 @@ class _NoteEditorState extends State<NoteEditorScreen> {
   Future<void> _removeImage(String path) async {
     setState(() {
       _note = _note.copyWith(
-        imagePaths: _note.imagePaths.where((p) => p != path).toList());
+          imagePaths: _note.imagePaths.where((p) => p != path).toList());
       _changed = true;
     });
   }
@@ -93,7 +99,8 @@ class _NoteEditorState extends State<NoteEditorScreen> {
       .name;
 
   String _folderName(String id) => widget.folders
-      .firstWhere((f) => f.id == id, orElse: () => const Folder(id: '', name: ''))
+      .firstWhere((f) => f.id == id,
+          orElse: () => const Folder(id: '', name: ''))
       .name;
 
   @override
@@ -116,16 +123,27 @@ class _NoteEditorState extends State<NoteEditorScreen> {
           elevation: 0,
           iconTheme: IconThemeData(color: c.icon),
           title: Text(_folderName(_note.folderId),
-            style: TextStyle(fontSize: 14, color: c.subtext)),
+              style: TextStyle(fontSize: 14, color: c.subtext)),
           actions: [
             if (_changed)
               TextButton(
                 onPressed: _save,
-                child: Text('保存', style: TextStyle(color: c.accent, fontWeight: FontWeight.w700)),
+                child: Text('保存',
+                    style: TextStyle(
+                        color: c.accent, fontWeight: FontWeight.w700)),
               ),
             IconButton(
-              icon: Icon(_note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                color: _note.isPinned ? c.accent : c.icon),
+              icon: Icon(
+                _isPreview ? Icons.edit_outlined : Icons.preview_outlined,
+                color: c.icon,
+              ),
+              tooltip: _isPreview ? '編集モード' : 'プレビュー',
+              onPressed: () => setState(() => _isPreview = !_isPreview),
+            ),
+            IconButton(
+              icon: Icon(
+                  _note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  color: _note.isPinned ? c.accent : c.icon),
               onPressed: () => setState(() {
                 _note = _note.copyWith(isPinned: !_note.isPinned);
                 _changed = true;
@@ -137,17 +155,18 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                 if (v == 'delete') _softDelete();
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: 'delete',
-                  child: Row(children: [
-                    const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text('ゴミ箱へ', style: TextStyle(color: c.text)),
-                  ])),
+                PopupMenuItem(
+                    value: 'delete',
+                    child: Row(children: [
+                      const Icon(Icons.delete_outline,
+                          size: 16, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Text('ゴミ箱へ', style: TextStyle(color: c.text)),
+                    ])),
               ],
             ),
           ],
         ),
-
         body: Column(children: [
           Divider(height: 1, color: c.border),
 
@@ -157,11 +176,16 @@ class _NoteEditorState extends State<NoteEditorScreen> {
             child: TextField(
               controller: _titleCtrl,
               onChanged: (_) => setState(() => _changed = true),
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: c.text),
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w700, color: c.text),
               decoration: InputDecoration(
                 hintText: 'タイトル',
-                hintStyle: TextStyle(color: c.subtext, fontWeight: FontWeight.w700, fontSize: 22),
-                border: InputBorder.none, isDense: true,
+                hintStyle: TextStyle(
+                    color: c.subtext,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22),
+                border: InputBorder.none,
+                isDense: true,
               ),
             ),
           ),
@@ -173,34 +197,39 @@ class _NoteEditorState extends State<NoteEditorScreen> {
               // フォルダ選択
               PopupMenuButton<String>(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: c.input, borderRadius: BorderRadius.circular(8)),
+                      color: c.input, borderRadius: BorderRadius.circular(8)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.folder_outlined, size: 12, color: c.icon),
                     const SizedBox(width: 4),
                     Text(_folderName(_note.folderId),
-                      style: TextStyle(fontSize: 11, color: c.subtext)),
+                        style: TextStyle(fontSize: 11, color: c.subtext)),
                   ]),
                 ),
                 onSelected: (id) => setState(() {
                   _note = _note.copyWith(folderId: id);
                   _changed = true;
                 }),
-                itemBuilder: (_) => widget.folders.map((f) =>
-                  PopupMenuItem(value: f.id,
-                    child: Text(f.name, style: TextStyle(fontSize: 13, color: c.text)))).toList(),
+                itemBuilder: (_) => widget.folders
+                    .map((f) => PopupMenuItem(
+                        value: f.id,
+                        child: Text(f.name,
+                            style: TextStyle(fontSize: 13, color: c.text))))
+                    .toList(),
               ),
               const SizedBox(width: 8),
               Icon(Icons.access_time, size: 10, color: c.subtext),
               const SizedBox(width: 2),
               Text('作成 ${fmtDate(_note.createdAt)}',
-                style: TextStyle(fontSize: 10, color: c.subtext)),
+                  style: TextStyle(fontSize: 10, color: c.subtext)),
               const SizedBox(width: 6),
               Icon(Icons.update, size: 10, color: c.accent),
               const SizedBox(width: 2),
               Text('更新 ${fmtDate(_note.updatedAt)}',
-                style: TextStyle(fontSize: 10, color: c.accent.withValues(alpha: 0.8))),
+                  style: TextStyle(
+                      fontSize: 10, color: c.accent.withValues(alpha: 0.8))),
             ]),
           ),
 
@@ -209,34 +238,41 @@ class _NoteEditorState extends State<NoteEditorScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Wrap(spacing: 6, runSpacing: 4, children: [
               ..._note.tagIds.map((id) => GestureDetector(
-                onTap: () => setState(() {
-                  _note = _note.copyWith(
-                    tagIds: _note.tagIds.where((t) => t != id).toList());
-                  _changed = true;
-                }),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: c.accentSoft, borderRadius: BorderRadius.circular(20)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('#${_tagName(id)}',
-                      style: TextStyle(fontSize: 11, color: c.accent, fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 3),
-                    Icon(Icons.close, size: 10, color: c.accent),
-                  ]),
-                ),
-              )),
+                    onTap: () => setState(() {
+                      _note = _note.copyWith(
+                          tagIds: _note.tagIds.where((t) => t != id).toList());
+                      _changed = true;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: c.accentSoft,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text('#${_tagName(id)}',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: c.accent,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 3),
+                        Icon(Icons.close, size: 10, color: c.accent),
+                      ]),
+                    ),
+                  )),
               // タグ追加
               PopupMenuButton<String>(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    border: Border.all(color: c.border),
-                    borderRadius: BorderRadius.circular(20)),
+                      border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(20)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.add, size: 11, color: c.subtext),
                     const SizedBox(width: 2),
-                    Text('タグ追加', style: TextStyle(fontSize: 11, color: c.subtext)),
+                    Text('タグ追加',
+                        style: TextStyle(fontSize: 11, color: c.subtext)),
                   ]),
                 ),
                 onSelected: (id) {
@@ -247,9 +283,12 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                     });
                   }
                 },
-                itemBuilder: (_) => widget.tags.map((t) =>
-                  PopupMenuItem(value: t.id,
-                    child: Text(t.name, style: TextStyle(fontSize: 13, color: c.text)))).toList(),
+                itemBuilder: (_) => widget.tags
+                    .map((t) => PopupMenuItem(
+                        value: t.id,
+                        child: Text(t.name,
+                            style: TextStyle(fontSize: 13, color: c.text))))
+                    .toList(),
               ),
             ]),
           ),
@@ -263,34 +302,67 @@ class _NoteEditorState extends State<NoteEditorScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
               for (final icon in [
-                Icons.format_bold, Icons.format_italic, Icons.format_underline,
-                Icons.format_list_bulleted, Icons.format_list_numbered,
+                Icons.format_bold,
+                Icons.format_italic,
+                Icons.format_underline,
+                Icons.format_list_bulleted,
+                Icons.format_list_numbered,
               ])
-                IconButton(icon: Icon(icon, size: 18, color: c.icon),
-                  onPressed: () {}, padding: const EdgeInsets.symmetric(horizontal: 6),
-                  constraints: const BoxConstraints()),
+                IconButton(
+                    icon: Icon(icon, size: 18, color: c.icon),
+                    onPressed: () {},
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    constraints: const BoxConstraints()),
               const Spacer(),
-              IconButton(icon: Icon(Icons.image_outlined, size: 18, color: c.icon),
-                onPressed: _pickImage, padding: EdgeInsets.zero,
-                constraints: const BoxConstraints()),
+              IconButton(
+                  icon: Icon(Icons.image_outlined, size: 18, color: c.icon),
+                  onPressed: _pickImage,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints()),
             ]),
           ),
           Divider(height: 1, color: c.border),
 
           // 本文
-          Expanded(child: TextField(
-            controller: _bodyCtrl,
-            onChanged: (_) => setState(() => _changed = true),
-            maxLines: null, expands: true,
-            textAlignVertical: TextAlignVertical.top,
-            style: TextStyle(fontSize: 15, color: c.text, height: 1.8),
-            decoration: InputDecoration(
-              hintText: 'メモを入力...',
-              hintStyle: TextStyle(color: c.subtext, fontSize: 15),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            ),
-          )),
+          Expanded(
+            child: _isPreview
+                ? Markdown(
+                    data: _bodyCtrl.text,
+                    selectable: true,
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(fontSize: 15, color: c.text, height: 1.8),
+                      h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.text),
+                      h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.text),
+                      h3: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.text),
+                      strong: TextStyle(fontWeight: FontWeight.bold, color: c.text),
+                      em: TextStyle(fontStyle: FontStyle.italic, color: c.text),
+                      blockquoteDecoration: BoxDecoration(
+                        border: Border(left: BorderSide(color: c.accent, width: 4)),
+                        color: c.accentSoft,
+                      ),
+                      code: TextStyle(
+                        backgroundColor: c.input,
+                        color: c.accent,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  )
+                : TextField(
+                    controller: _bodyCtrl,
+                    onChanged: (_) => setState(() => _changed = true),
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: TextStyle(fontSize: 15, color: c.text, height: 1.8),
+                    decoration: InputDecoration(
+                      hintText: 'メモを入力...',
+                      hintStyle: TextStyle(color: c.subtext, fontSize: 15),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    ),
+                  ),
+          ),
 
           // 画像サムネイル
           if (_note.imagePaths.isNotEmpty)
@@ -299,27 +371,33 @@ class _NoteEditorState extends State<NoteEditorScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                children: _note.imagePaths.map((path) => Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: Stack(children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(File(path),
-                        width: 100, height: 74, fit: BoxFit.cover),
-                    ),
-                    Positioned(top: -4, right: -4,
-                      child: GestureDetector(
-                        onTap: () => _removeImage(path),
-                        child: Container(
-                          width: 20, height: 20,
-                          decoration: BoxDecoration(
-                            color: c.accent, shape: BoxShape.circle),
-                          child: const Icon(Icons.close, size: 12, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ]),
-                )).toList(),
+                children: _note.imagePaths
+                    .map((path) => Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Stack(children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(File(path),
+                                  width: 100, height: 74, fit: BoxFit.cover),
+                            ),
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: GestureDetector(
+                                onTap: () => _removeImage(path),
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                      color: c.accent, shape: BoxShape.circle),
+                                  child: const Icon(Icons.close,
+                                      size: 12, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ]),
+                        ))
+                    .toList(),
               ),
             ),
 
@@ -330,10 +408,12 @@ class _NoteEditorState extends State<NoteEditorScreen> {
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(
-                border: Border.all(color: c.border, width: 1.5),
-                borderRadius: BorderRadius.circular(10)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.add_photo_alternate_outlined, size: 16, color: c.icon),
+                  border: Border.all(color: c.border, width: 1.5),
+                  borderRadius: BorderRadius.circular(10)),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.add_photo_alternate_outlined,
+                    size: 16, color: c.icon),
                 const SizedBox(width: 6),
                 Text('画像を追加', style: TextStyle(fontSize: 12, color: c.subtext)),
               ]),
