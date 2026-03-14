@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -31,7 +32,7 @@ String _extractBodyPreview(String body) {
         parts.add('[画像]');
       } else if (type == 'checkbox') {
         final checked = map['checked'] as bool? ?? false;
-        parts.add('${checked ? '☑' : '☐'} $text');
+        parts.add('${checked ? '[v]' : '[ ]'} $text');
       } else if (type == 'numberedList') {
         final num = map['listNumber'] as int? ?? 1;
         parts.add('$num. $text');
@@ -39,7 +40,7 @@ String _extractBodyPreview(String body) {
         parts.add(text);
       }
     }
-    return parts.join(' ');
+    return parts.join('  ');
   } catch (_) {
     return body;
   }
@@ -215,7 +216,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _exportData() async {
-    // チュートリアル表示
     final proceed = await _showTutorial(
       title: 'エクスポートとは？',
       icon: Icons.upload_outlined,
@@ -257,7 +257,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _importUpNote() async {
-    // チュートリアル表示
     final proceed = await _showTutorial(
       title: 'UpNoteインポートとは？',
       icon: Icons.folder_zip_outlined,
@@ -293,7 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _importData() async {
-    // チュートリアル表示
     final proceed = await _showTutorial(
       title: 'インポートとは？',
       icon: Icons.download_outlined,
@@ -343,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
           Expanded(
               child: Text(title,
-                  style: const TextStyle(
+                  style: GoogleFonts.notoSansJp(
                       fontSize: 16, fontWeight: FontWeight.w700))),
         ]),
         content: Column(
@@ -364,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Center(
                           child: Text(
                             '${e.key + 1}',
-                            style: const TextStyle(
+                            style: GoogleFonts.notoSansJp(
                                 color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold),
@@ -373,10 +371,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Expanded(
                           child: Text(e.value,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: c.text,
-                                  height: 1.5))),
+                              style: GoogleFonts.notoSansJp(
+                                  fontSize: 13, color: c.text, height: 1.5))),
                     ],
                   ),
                 )),
@@ -415,21 +411,65 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (ctx) {
         final notifier = ctx.read<ThemeNotifier>();
+        final current = notifier.mode;
         return AlertDialog(
-          title: const Text('テーマを選択'),
+          title: Text('テーマ', style: GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w700)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: AppThemeMode.values
-                .map((mode) => ListTile(
-                      leading: CircleAvatar(
-                          backgroundColor: themeColors[mode], radius: 12),
-                      title: Text(labels[mode]!),
-                      onTap: () {
-                        notifier.setMode(mode);
-                        Navigator.pop(ctx);
-                      },
-                    ))
-                .toList(),
+            children: AppThemeMode.values.map((mode) {
+              final isActive = mode == current;
+              return InkWell(
+                onTap: () {
+                  notifier.setMode(mode);
+                  Navigator.pop(ctx);
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? (themeColors[mode]!).withOpacity(0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: isActive
+                            ? themeColors[mode]!
+                            : Colors.transparent,
+                        width: 1.5),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: themeColors[mode],
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeColors[mode]!.withOpacity(0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text(labels[mode]!,
+                            style: GoogleFonts.notoSansJp(
+                                fontSize: 14,
+                                fontWeight: isActive
+                                    ? FontWeight.w700
+                                    : FontWeight.normal))),
+                    if (isActive)
+                      Icon(Icons.check_circle,
+                          size: 16, color: themeColors[mode]),
+                  ]),
+                ),
+              );
+            }).toList(),
           ),
         );
       },
@@ -443,83 +483,84 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: c.bg,
       body: SafeArea(
         child: Row(children: [
-        _Sidebar(
-          colors: c,
-          folders: _folders,
-          tags: _tags,
-          activeFolderId: _activeFolderId,
-          activeTagId: _activeTagId,
-          showTrash: _showTrash,
-          onFolderTap: (id) => setState(() {
-            _activeFolderId = id;
-            _activeTagId = null;
-            _showTrash = false;
-          }),
-          onTagTap: (id) => setState(() {
-            _activeTagId = _activeTagId == id ? null : id;
-            _activeFolderId = null;
-            _showTrash = false;
-          }),
-          onTrashTap: () => setState(() {
-            _showTrash = true;
-            _activeFolderId = null;
-            _activeTagId = null;
-          }),
-          onFoldersReordered: (f) async {
-            _folders = f;
-            await _db.reorderFolders(f);
-            setState(() {});
-          },
-          onFolderAdded: (name) async {
-            await _db.insertFolder(
-                Folder(id: _uuid.v4(), name: name, sortOrder: _folders.length));
-            _load();
-          },
-          onFolderRenamed: (f) async {
-            await _db.updateFolder(f);
-            _load();
-          },
-          onTagAdded: (name) async {
-            await _db.insertTag(Tag(id: _uuid.v4(), name: name));
-            _load();
-          },
-          onTagRenamed: (t) async {
-            await _db.updateTag(t);
-            _load();
-          },
-          onNewNote: _newNote,
-          onTheme: _showThemeSelector,
-        ),
-        _NoteList(
-          colors: c,
-          notes: _filtered,
-          tags: _tags,
-          selected: _selected,
-          sort: _sort,
-          search: _search,
-          showTrash: _showTrash,
-          onSearchChanged: (v) => setState(() => _search = v),
-          onSortChanged: (s) => setState(() => _sort = s),
-          onNoteTap: (n) {
-            setState(() => _selected = n);
-            _openEditor(n);
-          },
-          onNewNote: _newNote,
-          count: _filtered.length,
-          onRestoreNote: _restoreNote,
-          onHardDeleteNote: _hardDeleteNote,
-          onEmptyTrash: _emptyTrash,
-          onExport: _exportData,
-          onImport: _importData,
-          onImportUpNote: _importUpNote,
-        ),
-      ])),
+          _Sidebar(
+            colors: c,
+            folders: _folders,
+            tags: _tags,
+            activeFolderId: _activeFolderId,
+            activeTagId: _activeTagId,
+            showTrash: _showTrash,
+            onFolderTap: (id) => setState(() {
+              _activeFolderId = id;
+              _activeTagId = null;
+              _showTrash = false;
+            }),
+            onTagTap: (id) => setState(() {
+              _activeTagId = _activeTagId == id ? null : id;
+              _activeFolderId = null;
+              _showTrash = false;
+            }),
+            onTrashTap: () => setState(() {
+              _showTrash = true;
+              _activeFolderId = null;
+              _activeTagId = null;
+            }),
+            onFoldersReordered: (f) async {
+              _folders = f;
+              await _db.reorderFolders(f);
+              setState(() {});
+            },
+            onFolderAdded: (name) async {
+              await _db.insertFolder(
+                  Folder(id: _uuid.v4(), name: name, sortOrder: _folders.length));
+              _load();
+            },
+            onFolderRenamed: (f) async {
+              await _db.updateFolder(f);
+              _load();
+            },
+            onTagAdded: (name) async {
+              await _db.insertTag(Tag(id: _uuid.v4(), name: name));
+              _load();
+            },
+            onTagRenamed: (t) async {
+              await _db.updateTag(t);
+              _load();
+            },
+            onNewNote: _newNote,
+            onTheme: _showThemeSelector,
+          ),
+          _NoteList(
+            colors: c,
+            notes: _filtered,
+            tags: _tags,
+            selected: _selected,
+            sort: _sort,
+            search: _search,
+            showTrash: _showTrash,
+            onSearchChanged: (v) => setState(() => _search = v),
+            onSortChanged: (s) => setState(() => _sort = s),
+            onNoteTap: (n) {
+              setState(() => _selected = n);
+              _openEditor(n);
+            },
+            onNewNote: _newNote,
+            count: _filtered.length,
+            onRestoreNote: _restoreNote,
+            onHardDeleteNote: _hardDeleteNote,
+            onEmptyTrash: _emptyTrash,
+            onExport: _exportData,
+            onImport: _importData,
+            onImportUpNote: _importUpNote,
+          ),
+        ]),
+      ),
     );
   }
 }
 
 // ══════════════════════════════════════════
-// Sidebar
+// Sidebar  (redesigned – narrower, icons, theme at bottom)
 // ══════════════════════════════════════════
 class _Sidebar extends StatefulWidget {
   final AppColors colors;
@@ -573,197 +614,286 @@ class _SidebarState extends State<_Sidebar> {
   @override
   Widget build(BuildContext ctx) {
     return Container(
-      width: 200,
-      color: c.sidebar,
+      width: 165,
+      decoration: BoxDecoration(
+        color: c.sidebar,
+        border: Border(right: BorderSide(color: c.border, width: 1)),
+      ),
       child: Column(children: [
-        // Header
+        // ─── Header ─────────────────────────────
         Container(
           height: 52,
-          decoration: BoxDecoration(
-            color: c.header,
-            border: Border(bottom: BorderSide(color: c.border)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(children: [
-            Image.asset('assets/images/hippo.png', width: 26, height: 26),
+            Image.asset('assets/images/hippo.png', width: 24, height: 24),
             const SizedBox(width: 8),
             Expanded(
                 child: Text('Evernote',
-                    style: TextStyle(
+                    style: GoogleFonts.notoSansJp(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: c.text))),
-            IconButton(
-              icon: Icon(Icons.palette_outlined, size: 18, color: c.icon),
-              onPressed: widget.onTheme,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'テーマ',
-            ),
           ]),
         ),
+        Divider(height: 1, color: c.border),
 
-        // New note button
+        // ─── New note button ─────────────────────
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: widget.onNewNote,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('新規メモ',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: c.accent,
                 foregroundColor: c.accentText,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 9),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(9)),
                 elevation: 0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, size: 15),
+                  const SizedBox(width: 4),
+                  Text('新規メモ',
+                      style: GoogleFonts.notoSansJp(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
+                ],
               ),
             ),
           ),
         ),
 
         Expanded(
-            child: ListView(padding: EdgeInsets.zero, children: [
-          // すべてのメモ
-          _FolderTile(
-            c: c,
-            label: 'すべてのメモ',
-            isActive: widget.activeFolderId == null &&
-                !widget.showTrash &&
-                widget.activeTagId == null,
-            onTap: () => widget.onFolderTap(null),
-          ),
-
-          // ── フォルダ ──
-          _SectionHeader(
+          child: ListView(padding: EdgeInsets.zero, children: [
+            // ─ すべてのメモ ─
+            _NavTile(
               c: c,
-              label: 'フォルダ',
-              onAdd: () => setState(() => _addingFolder = true)),
+              icon: Icons.notes,
+              label: 'すべてのメモ',
+              isActive: widget.activeFolderId == null &&
+                  !widget.showTrash &&
+                  widget.activeTagId == null,
+              onTap: () => widget.onFolderTap(null),
+            ),
 
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            onReorder: (o, n) {
-              final list = [...widget.folders];
-              if (n > o) n--;
-              final item = list.removeAt(o);
-              list.insert(n, item);
-              widget.onFoldersReordered(list);
-            },
-            children: widget.folders.map((f) {
-              if (_editingFolderId == f.id) {
-                return _EditTile(
+            // ─ フォルダ ─
+            _SectionHeader(
+                c: c,
+                label: 'フォルダ',
+                onAdd: () => setState(() => _addingFolder = true)),
+
+            ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              onReorder: (o, n) {
+                final list = [...widget.folders];
+                if (n > o) n--;
+                final item = list.removeAt(o);
+                list.insert(n, item);
+                widget.onFoldersReordered(list);
+              },
+              children: widget.folders.map((f) {
+                if (_editingFolderId == f.id) {
+                  return _EditTile(
+                    key: ValueKey(f.id),
+                    c: c,
+                    initialValue: f.name,
+                    onConfirm: (v) {
+                      widget.onFolderRenamed(
+                          Folder(id: f.id, name: v, sortOrder: f.sortOrder));
+                      setState(() => _editingFolderId = null);
+                    },
+                    onCancel: () => setState(() => _editingFolderId = null),
+                  );
+                }
+                return _NavTile(
                   key: ValueKey(f.id),
                   c: c,
-                  initialValue: f.name,
+                  icon: Icons.folder_outlined,
+                  label: f.name,
+                  isActive: widget.activeFolderId == f.id,
+                  draggable: true,
+                  onTap: () => widget.onFolderTap(f.id),
+                  onEdit: () => setState(() => _editingFolderId = f.id),
+                );
+              }).toList(),
+            ),
+
+            if (_addingFolder)
+              _EditTile(
+                key: const ValueKey('new_folder'),
+                c: c,
+                initialValue: '',
+                onConfirm: (v) {
+                  widget.onFolderAdded(v);
+                  setState(() => _addingFolder = false);
+                },
+                onCancel: () => setState(() => _addingFolder = false),
+              ),
+
+            // ─ タグ ─
+            _SectionHeader(
+                c: c,
+                label: 'タグ',
+                onAdd: () => setState(() => _addingTag = true)),
+
+            ...widget.tags.map((t) {
+              if (_editingTagId == t.id) {
+                return _EditTile(
+                  key: ValueKey(t.id),
+                  c: c,
+                  initialValue: t.name,
                   onConfirm: (v) {
-                    widget.onFolderRenamed(
-                        Folder(id: f.id, name: v, sortOrder: f.sortOrder));
-                    setState(() => _editingFolderId = null);
+                    widget.onTagRenamed(Tag(id: t.id, name: v));
+                    setState(() => _editingTagId = null);
                   },
-                  onCancel: () => setState(() => _editingFolderId = null),
+                  onCancel: () => setState(() => _editingTagId = null),
                 );
               }
-              return _FolderTile(
-                key: ValueKey(f.id),
-                c: c,
-                label: f.name,
-                isActive: widget.activeFolderId == f.id,
-                draggable: true,
-                onTap: () => widget.onFolderTap(f.id),
-                onEdit: () => setState(() => _editingFolderId = f.id),
-              );
-            }).toList(),
-          ),
-
-          if (_addingFolder)
-            _EditTile(
-              key: const ValueKey('new_folder'),
-              c: c,
-              initialValue: '',
-              onConfirm: (v) {
-                widget.onFolderAdded(v);
-                setState(() => _addingFolder = false);
-              },
-              onCancel: () => setState(() => _addingFolder = false),
-            ),
-
-          // ── タグ ──
-          _SectionHeader(
-              c: c,
-              label: 'タグ',
-              onAdd: () => setState(() => _addingTag = true)),
-
-          ...widget.tags.map((t) {
-            if (_editingTagId == t.id) {
-              return _EditTile(
+              final isActive = widget.activeTagId == t.id;
+              return _NavTile(
                 key: ValueKey(t.id),
                 c: c,
-                initialValue: t.name,
-                onConfirm: (v) {
-                  widget.onTagRenamed(Tag(id: t.id, name: v));
-                  setState(() => _editingTagId = null);
-                },
-                onCancel: () => setState(() => _editingTagId = null),
+                icon: Icons.label_outline,
+                label: t.name,
+                isActive: isActive,
+                onTap: () => widget.onTagTap(t.id),
+                onEdit: () => setState(() => _editingTagId = t.id),
               );
-            }
-            final isActive = widget.activeTagId == t.id;
-            return ListTile(
-              key: ValueKey(t.id),
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              tileColor: isActive ? c.active : null,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              leading: Icon(Icons.label_outline,
-                  size: 14, color: isActive ? c.accent : c.icon),
-              title: Text(t.name,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isActive ? c.activeText : c.subtext,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  )),
-              trailing: IconButton(
-                icon: Icon(Icons.edit, size: 11, color: c.subtext),
-                onPressed: () => setState(() => _editingTagId = t.id),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+            }),
+
+            if (_addingTag)
+              _EditTile(
+                key: const ValueKey('new_tag'),
+                c: c,
+                initialValue: '',
+                onConfirm: (v) {
+                  widget.onTagAdded(v);
+                  setState(() => _addingTag = false);
+                },
+                onCancel: () => setState(() => _addingTag = false),
               ),
-              onTap: () => widget.onTagTap(t.id),
-            );
-          }),
+          ]),
+        ),
 
-          if (_addingTag)
-            _EditTile(
-              key: const ValueKey('new_tag'),
-              c: c,
-              initialValue: '',
-              onConfirm: (v) {
-                widget.onTagAdded(v);
-                setState(() => _addingTag = false);
-              },
-              onCancel: () => setState(() => _addingTag = false),
+        // ─ Bottom: ゴミ箱 + テーマ ─────────────────
+        Divider(height: 1, color: c.border),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(children: [
+            Expanded(
+              child: InkWell(
+                onTap: widget.onTrashTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: widget.showTrash ? c.active : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.delete_outline,
+                        size: 15,
+                        color: widget.showTrash ? c.accent : c.icon),
+                    const SizedBox(width: 6),
+                    Text('ゴミ箱',
+                        style: GoogleFonts.notoSansJp(
+                            fontSize: 12,
+                            color: widget.showTrash ? c.activeText : c.subtext,
+                            fontWeight: widget.showTrash
+                                ? FontWeight.w600
+                                : FontWeight.normal)),
+                  ]),
+                ),
+              ),
             ),
-        ])),
-
-        // ゴミ箱
-        Divider(color: c.border, height: 1),
-        ListTile(
-          dense: true,
-          leading: Icon(Icons.delete_outline, size: 16, color: c.icon),
-          title: Text('ゴミ箱', style: TextStyle(fontSize: 13, color: c.subtext)),
-          selected: widget.showTrash,
-          onTap: widget.onTrashTap,
+            // テーマボタン (コーナーに配置)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onTheme,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(7),
+                  child: Icon(Icons.palette_outlined,
+                      size: 17, color: c.icon),
+                ),
+              ),
+            ),
+          ]),
         ),
       ]),
     );
   }
 }
 
-// ── 小物ウィジェット ────────────────────────
+// ── ナビゲーション用タイル ────────────────────────
+class _NavTile extends StatelessWidget {
+  final AppColors c;
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final bool draggable;
+  final VoidCallback onTap;
+  final VoidCallback? onEdit;
+
+  const _NavTile({
+    super.key,
+    required this.c,
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.draggable = false,
+    this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext ctx) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: isActive ? c.active : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(children: [
+            if (draggable) ...[
+              Icon(Icons.drag_indicator, size: 12, color: c.border),
+              const SizedBox(width: 2),
+            ],
+            Icon(icon, size: 15, color: isActive ? c.accent : c.icon),
+            const SizedBox(width: 7),
+            Expanded(
+                child: Text(label,
+                    style: GoogleFonts.notoSansJp(
+                      fontSize: 12,
+                      color: isActive ? c.activeText : c.text,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis)),
+            if (onEdit != null)
+              GestureDetector(
+                onTap: onEdit,
+                child: Icon(Icons.edit_outlined, size: 12, color: c.subtext),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── セクションヘッダー ────────────────────────
 class _SectionHeader extends StatelessWidget {
   final AppColors c;
   final String label;
@@ -772,74 +902,24 @@ class _SectionHeader extends StatelessWidget {
       {required this.c, required this.label, required this.onAdd});
   @override
   Widget build(BuildContext ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 4),
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 2),
         child: Row(children: [
           Text(label,
-              style: TextStyle(
+              style: GoogleFonts.notoSansJp(
                   fontSize: 10,
                   color: c.subtext,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2)),
+                  letterSpacing: 1.0)),
           const Spacer(),
-          IconButton(
-              icon: Icon(Icons.add, size: 14, color: c.subtext),
-              onPressed: onAdd,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints()),
+          GestureDetector(
+            onTap: onAdd,
+            child: Icon(Icons.add, size: 14, color: c.subtext),
+          ),
         ]),
       );
 }
 
-class _FolderTile extends StatelessWidget {
-  final AppColors c;
-  final String label;
-  final bool isActive;
-  final bool draggable;
-  final VoidCallback onTap;
-  final VoidCallback? onEdit;
-  const _FolderTile(
-      {super.key,
-      required this.c,
-      required this.label,
-      required this.isActive,
-      required this.onTap,
-      this.draggable = false,
-      this.onEdit});
-
-  @override
-  Widget build(BuildContext ctx) => ListTile(
-        dense: true,
-        visualDensity: VisualDensity.compact,
-        tileColor: isActive ? c.active : null,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-        leading: draggable
-            ? Icon(Icons.drag_indicator, size: 14, color: c.border)
-            : const SizedBox(width: 14),
-        title: Row(children: [
-          Icon(Icons.folder_outlined,
-              size: 14, color: isActive ? c.accent : c.icon),
-          const SizedBox(width: 6),
-          Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isActive ? c.activeText : c.text,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                    overflow: TextOverflow.ellipsis,
-                  ))),
-        ]),
-        trailing: onEdit != null
-            ? IconButton(
-                icon: Icon(Icons.edit, size: 11, color: c.subtext),
-                onPressed: onEdit,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints())
-            : null,
-        onTap: onTap,
-      );
-}
-
+// ── 編集タイル ────────────────────────
 class _EditTile extends StatefulWidget {
   final AppColors c;
   final String initialValue;
@@ -871,7 +951,7 @@ class _EditTileState extends State<_EditTile> {
 
   @override
   Widget build(BuildContext ctx) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(children: [
           Expanded(
               child: TextField(
@@ -880,7 +960,7 @@ class _EditTileState extends State<_EditTile> {
             onSubmitted: (v) {
               if (v.trim().isNotEmpty) widget.onConfirm(v.trim());
             },
-            style: TextStyle(fontSize: 12, color: widget.c.text),
+            style: GoogleFonts.notoSansJp(fontSize: 12, color: widget.c.text),
             decoration: InputDecoration(
               filled: true,
               fillColor: widget.c.input,
@@ -911,7 +991,7 @@ class _EditTileState extends State<_EditTile> {
 }
 
 // ══════════════════════════════════════════
-// Note List
+// Note List  (redesigned cards)
 // ══════════════════════════════════════════
 class _NoteList extends StatelessWidget {
   final AppColors colors;
@@ -964,57 +1044,73 @@ class _NoteList extends StatelessWidget {
   Widget build(BuildContext ctx) {
     return Expanded(
       child: Column(children: [
-        // Header bar
+        // ─── Header bar (search + sort + menu) ───────────
         Container(
           height: 52,
           color: c.header,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(children: [
+            // Search field (no extra gray bg wrapping, border only)
             Expanded(
-                child: Container(
-              decoration: BoxDecoration(
-                  color: c.input, borderRadius: BorderRadius.circular(9)),
               child: TextField(
                 onChanged: onSearchChanged,
-                style: TextStyle(fontSize: 12, color: c.text),
+                style: GoogleFonts.notoSansJp(fontSize: 13, color: c.text),
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search, size: 15, color: c.icon),
+                  prefixIcon: Icon(Icons.search, size: 17, color: c.icon),
                   hintText: '検索',
-                  hintStyle: TextStyle(color: c.subtext, fontSize: 12),
-                  border: InputBorder.none,
+                  hintStyle: GoogleFonts.notoSansJp(
+                      color: c.subtext, fontSize: 13),
+                  filled: true,
+                  fillColor: c.input,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: c.accent, width: 1.5),
+                  ),
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
               ),
-            )),
-            const SizedBox(width: 8),
+            ),
+            const SizedBox(width: 6),
             // Sort
             PopupMenuButton<SortMode>(
               initialValue: sort,
               onSelected: onSortChanged,
+              tooltip: '並べ替え',
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                     color: c.input, borderRadius: BorderRadius.circular(8)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.swap_vert, size: 14, color: c.subtext),
-                  const SizedBox(width: 4),
+                  Icon(Icons.sort, size: 15, color: c.subtext),
+                  const SizedBox(width: 3),
                   Text(_sortLabel(sort),
-                      style: TextStyle(fontSize: 11, color: c.subtext)),
+                      style: GoogleFonts.notoSansJp(
+                          fontSize: 11, color: c.subtext)),
                 ]),
               ),
               itemBuilder: (_) => SortMode.values
                   .map((s) => PopupMenuItem(
                       value: s,
                       child: Text(_sortLabel(s),
-                          style: TextStyle(fontSize: 13, color: c.text))))
+                          style: GoogleFonts.notoSansJp(
+                              fontSize: 13, color: c.text))))
                   .toList(),
             ),
-            const SizedBox(width: 4),
-            // Settings menu (export/import)
+            const SizedBox(width: 2),
+            // Settings menu
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_horiz, size: 18, color: c.icon),
+              icon: Icon(Icons.more_vert, size: 19, color: c.icon),
+              tooltip: 'メニュー',
               onSelected: (v) {
                 if (v == 'export') onExport();
                 if (v == 'import') onImport();
@@ -1027,7 +1123,8 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.upload_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('エクスポート',
-                          style: TextStyle(fontSize: 13, color: c.text)),
+                          style: GoogleFonts.notoSansJp(
+                              fontSize: 13, color: c.text)),
                     ])),
                 PopupMenuItem(
                     value: 'import',
@@ -1035,7 +1132,8 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.download_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('インポート',
-                          style: TextStyle(fontSize: 13, color: c.text)),
+                          style: GoogleFonts.notoSansJp(
+                              fontSize: 13, color: c.text)),
                     ])),
                 PopupMenuItem(
                     value: 'import_upnote',
@@ -1043,7 +1141,8 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.folder_zip_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('UpNoteインポート',
-                          style: TextStyle(fontSize: 13, color: c.text)),
+                          style: GoogleFonts.notoSansJp(
+                              fontSize: 13, color: c.text)),
                     ])),
               ],
             ),
@@ -1051,12 +1150,12 @@ class _NoteList extends StatelessWidget {
         ),
         Divider(height: 1, color: c.border),
 
-        // Count + new
+        // ─── Count + New ───────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(children: [
             Text('$count 件',
-                style: TextStyle(
+                style: GoogleFonts.notoSansJp(
                     fontSize: 11,
                     color: c.subtext,
                     fontWeight: FontWeight.w600)),
@@ -1064,159 +1163,186 @@ class _NoteList extends StatelessWidget {
             if (showTrash && count > 0)
               TextButton.icon(
                 onPressed: onEmptyTrash,
-                icon: const Icon(Icons.delete_forever, size: 14, color: Colors.red),
-                label: const Text('すべて空にする',
-                    style: TextStyle(
+                icon: const Icon(Icons.delete_forever,
+                    size: 13, color: Colors.red),
+                label: Text('すべて空にする',
+                    style: GoogleFonts.notoSansJp(
                         fontSize: 11,
                         color: Colors.red,
                         fontWeight: FontWeight.w600)),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
                 ),
               )
             else if (!showTrash)
-              IconButton(
-                  icon: Icon(Icons.add_circle_outline, size: 18, color: c.accent),
-                  onPressed: onNewNote,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints()),
+              GestureDetector(
+                onTap: onNewNote,
+                child: Icon(Icons.add_circle_outline,
+                    size: 19, color: c.accent),
+              ),
           ]),
         ),
 
-        // List
+        // ─── Note Cards ───────────────────────────────
         Expanded(
             child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           itemCount: notes.length,
           itemBuilder: (_, i) {
             final n = notes[i];
             final isSelected = selected?.id == n.id;
+            final preview = n.body.isEmpty
+                ? ''
+                : _extractBodyPreview(n.body);
+
             return GestureDetector(
               onTap: showTrash ? null : () => onNoteTap(n),
               child: Container(
+                margin: const EdgeInsets.only(bottom: 6),
                 decoration: BoxDecoration(
-                  color: isSelected ? c.accentSoft : Colors.transparent,
-                  border: Border(
-                      left: BorderSide(
-                          color: isSelected ? c.accent : Colors.transparent,
-                          width: 3)),
+                  color: isSelected ? c.accentSoft : c.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? c.accent : c.border,
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    )
+                  ],
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // サムネイル
-                      if (n.imagePaths.isNotEmpty) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(n.imagePaths.first),
-                            width: 72,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 72,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                  color: c.input,
-                                  borderRadius: BorderRadius.circular(8)),
-                              child: Icon(Icons.image_outlined,
-                                  size: 22, color: c.icon),
+                child: Padding(
+                  padding: const EdgeInsets.all(11),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    // ── Title row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            n.title.isEmpty ? '（タイトルなし）' : n.title,
+                            style: GoogleFonts.notoSansJp(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color:
+                                  isSelected ? c.activeText : c.text,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        if (n.isPinned) ...[
+                          const SizedBox(width: 4),
+                          Icon(Icons.push_pin,
+                              size: 12, color: c.accent),
+                        ],
                       ],
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Row(children: [
-                              Expanded(
-                                  child: Text(
-                                      n.title.isEmpty ? '（タイトルなし）' : n.title,
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: isSelected
-                                              ? c.activeText
-                                              : c.text),
-                                      overflow: TextOverflow.ellipsis)),
-                              if (n.isPinned)
-                                Icon(Icons.push_pin, size: 11, color: c.accent),
-                            ]),
-                            const SizedBox(height: 3),
-                            Text(
-                              n.body.isEmpty
-                                  ? '（本文なし）'
-                                  : _extractBodyPreview(n.body),
-                              style: TextStyle(fontSize: 11, color: c.subtext),
+                    ),
+
+                    // ── Thumbnail + body preview
+                    if (n.imagePaths.isNotEmpty || preview.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        if (preview.isNotEmpty)
+                          Expanded(
+                            child: Text(
+                              preview,
+                              style: GoogleFonts.notoSansJp(
+                                  fontSize: 11,
+                                  color: c.subtext,
+                                  height: 1.5),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
-                            Row(children: [
-                              Text(
-                                '${n.updatedAt.month}/${n.updatedAt.day}',
-                                style:
-                                    TextStyle(fontSize: 10, color: c.subtext),
+                          ),
+                        if (n.imagePaths.isNotEmpty) ...[
+                          if (preview.isNotEmpty) const SizedBox(width: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(7),
+                            child: Image.file(
+                              File(n.imagePaths.first),
+                              width: 72,
+                              height: 54,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 72,
+                                height: 54,
+                                decoration: BoxDecoration(
+                                    color: c.input,
+                                    borderRadius:
+                                        BorderRadius.circular(7)),
+                                child: Icon(Icons.image_outlined,
+                                    size: 20, color: c.icon),
                               ),
-                              if (n.tagIds.isNotEmpty) ...[
-                                const SizedBox(width: 6),
-                                ...n.tagIds.take(2).map((id) => Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 5, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: c.accentSoft,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text('#${_tagName(id)}',
-                                            style: TextStyle(
-                                                fontSize: 9, color: c.accent)),
-                                      ),
-                                    )),
-                              ],
-                              if (showTrash) ...[
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () => onRestoreNote(n.id),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                        color: c.accentSoft,
-                                        borderRadius: BorderRadius.circular(4)),
-                                    child: Text('復元',
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            color: c.accent,
-                                            fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ],
+                      ]),
+                    ],
+
+                    const SizedBox(height: 7),
+
+                    // ── Footer: date + tags + trash actions
+                    Row(
+                      children: [
+                        // Date
+                        Text(
+                          _fmtDate(n.updatedAt),
+                          style: GoogleFonts.notoSansJp(
+                              fontSize: 10, color: c.subtext),
+                        ),
+                        // Tags
+                        if (n.tagIds.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          ...n.tagIds.take(2).map((id) => Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: c.accentSoft,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '#${_tagName(id)}',
+                                    style: GoogleFonts.notoSansJp(
+                                        fontSize: 9,
+                                        color: c.accent,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                GestureDetector(
-                                  onTap: () => onHardDeleteNote(n.id),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                        color: const Color(0xFFFFEEEE),
-                                        borderRadius: BorderRadius.circular(4)),
-                                    child: const Text('完全削除',
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.w600)),
-                                  ),
-                                ),
-                              ],
-                            ]),
-                          ])),
-                    ]),
+                              )),
+                        ],
+                        const Spacer(),
+                        // Trash actions
+                        if (showTrash) ...[
+                          _TrashBtn(
+                            label: '復元',
+                            color: c.accent,
+                            bg: c.accentSoft,
+                            onTap: () => onRestoreNote(n.id),
+                          ),
+                          const SizedBox(width: 5),
+                          _TrashBtn(
+                            label: '完全削除',
+                            color: Colors.red,
+                            bg: const Color(0xFFFFEEEE),
+                            onTap: () => onHardDeleteNote(n.id),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ]),
+                ),
               ),
             );
           },
@@ -1224,4 +1350,36 @@ class _NoteList extends StatelessWidget {
       ]),
     );
   }
+
+  String _fmtDate(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    return '${dt.month}/${dt.day}';
+  }
+}
+
+class _TrashBtn extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color bg;
+  final VoidCallback onTap;
+  const _TrashBtn(
+      {required this.label,
+      required this.color,
+      required this.bg,
+      required this.onTap});
+  @override
+  Widget build(BuildContext ctx) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration:
+              BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5)),
+          child: Text(label,
+              style: GoogleFonts.notoSansJp(
+                  fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+        ),
+      );
 }
