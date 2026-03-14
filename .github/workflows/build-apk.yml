@@ -30,7 +30,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.27.4'
           channel: stable
           cache: true
 
@@ -57,13 +57,14 @@ jobs:
       # ── 9. APK リネーム ────────────────────────────────
       - name: Rename APK
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
-          APK_NAME="Evernote-personal-${VERSION}-debug-#${{ github.run_number }}.apk"
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          APK_NAME="Evernote-personal-${VERSION}-debug.apk"
           mv build/app/outputs/flutter-apk/app-debug.apk \
              "build/app/outputs/flutter-apk/${APK_NAME}"
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      # ── 10. APK アップロード ───────────────────────────
+      # ── 10. APK アップロード（Artifacts・30日保存）─────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -85,10 +86,10 @@ jobs:
               `| 項目 | 内容 |`,
               `|------|------|`,
               `| **APK名** | \`${apkName}\` |`,
-              `| **ダウンロード** | [Actionsページ](${runUrl}) の Artifacts から |`,
+              `| **ダウンロード** | [Actionsページ](${runUrl}) の Artifacts セクションから |`,
               `| **保存期間** | 30日 |`,
               '',
-              '> Actionsページ → 該当ワークフロー → Artifacts セクションからDLできます。',
+              '> Actionsページ → 該当ワークフロー → **Artifacts** セクションからDLできます。',
             ].join('\n');
             github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -96,3 +97,46 @@ jobs:
               issue_number: context.issue.number,
               body,
             });
+
+      # ── 12. GitHub Releases に公開（mainマージ時のみ）──
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const apkName = process.env.APK_NAME;
+            const version = process.env.VERSION;
+            const apkPath = `build/app/outputs/flutter-apk/${apkName}`;
+
+            // リリース作成
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${version}`,
+              name: `v${version}`,
+              body: [
+                `## Evernote-personal v${version}`,
+                '',
+                '### ダウンロード',
+                `下の **Assets** から \`${apkName}\` をDLしてAndroidにインストールしてください。`,
+                '',
+                `### ビルド情報`,
+                `- コミット: ${context.sha.slice(0, 7)}`,
+                `- ビルド日時: ${new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC`,
+              ].join('\n'),
+              draft: false,
+              prerelease: false,
+            });
+
+            // APK をリリースにアップロード
+            const apkData = fs.readFileSync(apkPath);
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              name: apkName,
+              data: apkData,
+            });
+
+            console.log(`Released: ${release.data.html_url}`);
