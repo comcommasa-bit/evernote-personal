@@ -10,6 +10,7 @@ import '../database/db_helper.dart';
 import '../models/note.dart';
 import '../models/folder.dart';
 import '../models/tag.dart';
+import '../services/upnote_importer.dart';
 import 'note_editor_screen.dart';
 
 const _uuid = Uuid();
@@ -183,6 +184,26 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _importUpNote() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+      );
+      if (result == null || result.files.single.path == null) return;
+      final count =
+          await UpNoteImporter().importZip(result.files.single.path!);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('UpNoteから $count 件インポートしました')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('インポートに失敗しました: $e')));
+    }
+  }
+
   Future<void> _importData() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -319,6 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onHardDeleteNote: _hardDeleteNote,
           onExport: _exportData,
           onImport: _importData,
+          onImportUpNote: _importUpNote,
         ),
       ])),
     );
@@ -737,6 +759,7 @@ class _NoteList extends StatelessWidget {
   final Function(String) onHardDeleteNote;
   final VoidCallback onExport;
   final VoidCallback onImport;
+  final VoidCallback onImportUpNote;
 
   const _NoteList({
     required this.colors,
@@ -755,6 +778,7 @@ class _NoteList extends StatelessWidget {
     required this.onHardDeleteNote,
     required this.onExport,
     required this.onImport,
+    required this.onImportUpNote,
   });
 
   AppColors get c => colors;
@@ -821,6 +845,7 @@ class _NoteList extends StatelessWidget {
               onSelected: (v) {
                 if (v == 'export') onExport();
                 if (v == 'import') onImport();
+                if (v == 'import_upnote') onImportUpNote();
               },
               itemBuilder: (_) => [
                 PopupMenuItem(
@@ -837,6 +862,14 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.download_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('インポート',
+                          style: TextStyle(fontSize: 13, color: c.text)),
+                    ])),
+                PopupMenuItem(
+                    value: 'import_upnote',
+                    child: Row(children: [
+                      Icon(Icons.folder_zip_outlined, size: 16, color: c.icon),
+                      const SizedBox(width: 8),
+                      Text('UpNoteインポート',
                           style: TextStyle(fontSize: 13, color: c.text)),
                     ])),
               ],
