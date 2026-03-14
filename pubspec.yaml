@@ -30,6 +30,8 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/images/hippo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/hippo.png"
 
 flutter:
   uses-material-design: true
