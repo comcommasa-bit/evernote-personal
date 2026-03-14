@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../database/db_helper.dart';
 import '../models/note.dart';
@@ -17,31 +16,6 @@ class UpNoteImporter {
   Future<int> importZip(String zipPath) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
-
-    // 画像の保存先
-    final docsDir = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${docsDir.path}/upnote_images');
-    await imagesDir.create(recursive: true);
-
-    // 画像ファイルを先に展開 (相対パス -> 保存先パス)
-    final imageMap = <String, String>{};
-    for (final file in archive) {
-      if (!file.isFile) continue;
-      final name = file.name.toLowerCase();
-      if (name.endsWith('.jpg') ||
-          name.endsWith('.jpeg') ||
-          name.endsWith('.png') ||
-          name.endsWith('.gif') ||
-          name.endsWith('.webp')) {
-        final safeName = file.name.replaceAll(RegExp(r'[/\\]'), '_');
-        final outPath = '${imagesDir.path}/$safeName';
-        await File(outPath).writeAsBytes(file.content as List<int>);
-        imageMap[file.name] = outPath;
-        // ファイル名だけでも引けるように登録
-        final basename = file.name.split('/').last;
-        imageMap[basename] ??= outPath;
-      }
-    }
 
     // 既存フォルダ・タグを取得
     final existingFolders = await _db.getFolders();
@@ -94,18 +68,6 @@ class UpNoteImporter {
         }
       }
 
-      // 本文中の画像パスを解決
-      final imagePaths = <String>[];
-      final imgRegex = RegExp(r'!\[.*?\]\((.+?)\)');
-      for (final match in imgRegex.allMatches(body)) {
-        final ref = match.group(1)!;
-        final resolved = imageMap[ref] ??
-            imageMap[ref.split('/').last];
-        if (resolved != null && !imagePaths.contains(resolved)) {
-          imagePaths.add(resolved);
-        }
-      }
-
       final now = DateTime.now();
       final note = Note(
         id: _uuid.v4(),
@@ -113,7 +75,7 @@ class UpNoteImporter {
         body: body,
         folderId: folderId,
         tagIds: tagIds,
-        imagePaths: imagePaths,
+        imagePaths: const [],
         createdAt: _parseDate(createdStr) ?? now,
         updatedAt: _parseDate(updatedStr) ?? now,
       );
