@@ -296,9 +296,9 @@ class _SetupScreenState extends State<SetupScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text('スキップ',
-                style: TextStyle(
-                    color: Color(0xFF777777),
+            child: Text('スキップ',
+                style: GoogleFonts.notoSansJp(
+                    color: const Color(0xFF777777),
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
           ),

@@ -31,15 +31,16 @@ class AuthService {
   }
 
   // ── 生体認証 ────────────────────────────
-  /// デバイスが生体認証に対応しているか確認
+
+  /// デバイスが生体認証またはデバイス認証（PIN等）に対応しているか確認
   Future<bool> isBiometricAvailable() async {
     try {
-      final canCheck = await _auth.canCheckBiometrics;
+      // デバイスが認証機構自体をサポートしているか
       final supported = await _auth.isDeviceSupported();
-      if (!canCheck || !supported) return false;
-      // 登録済みの生体情報があるか確認
-      final biometrics = await _auth.getAvailableBiometrics();
-      return biometrics.isNotEmpty;
+      if (!supported) return false;
+      // 生体認証 or PIN/パターン が使えるか
+      final canCheck = await _auth.canCheckBiometrics;
+      return canCheck;
     } catch (_) {
       return false;
     }
@@ -55,21 +56,23 @@ class AuthService {
         key: _keyBiometricEnabled, value: enabled ? 'true' : 'false');
   }
 
-  /// 生体認証を実行。成功したら true を返す
-  /// [allowDeviceCredentials] : true にすると PIN/パターン/パスワードでのフォールバックを許可
-  Future<bool> authenticateWithBiometrics(
-      {bool allowDeviceCredentials = false}) async {
+  /// 生体認証を実行。成功したら true を返す。
+  ///
+  /// Android では biometricOnly: false にすることで、
+  /// 指紋センサーが認識できない場合に PIN/パターンへのフォールバックを許可します。
+  /// これにより「指紋が動かない」問題を回避できます。
+  Future<bool> authenticateWithBiometrics() async {
     try {
       return await _auth.authenticate(
-        localizedReason: 'Evernote-personalを開くには認証してください',
-        options: AuthenticationOptions(
-          biometricOnly: !allowDeviceCredentials,
-          stickyAuth: true,    // 画面を離れても認証状態を保持
+        localizedReason: 'Evernote-personal を開くには認証してください',
+        options: const AuthenticationOptions(
+          biometricOnly: false,     // PIN/パターンへのフォールバックを許可
+          stickyAuth: true,         // 画面を離れても認証ダイアログを保持
           sensitiveTransaction: false,
         ),
       );
     } on PlatformException catch (e) {
-      // ユーザーがキャンセル・認証不可などの場合は false を返す
+      // キャンセル・ロックアウト・未登録などはすべて false を返す
       if (e.code == auth_error.notAvailable ||
           e.code == auth_error.notEnrolled ||
           e.code == auth_error.lockedOut ||
@@ -83,7 +86,7 @@ class AuthService {
     }
   }
 
-  /// 利用可能な生体認証の種類を取得
+  /// 利用可能な生体認証の種類を取得（fingerprint / face / iris など）
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
