@@ -21,8 +21,8 @@ class App extends StatelessWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext ctx) {
-    final themeNotifier = ctx.watch<ThemeNotifier>();
+  Widget build(BuildContext context) {
+    final themeNotifier = context.watch<ThemeNotifier>();
     return MaterialApp(
       title: 'Evernote-personal',
       debugShowCheckedModeBanner: false,
@@ -105,7 +105,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext ctx) {
+  Widget build(BuildContext context) {
     switch (_state) {
       case 'setup':
         return SetupScreen(onSetupComplete: _onSetupComplete);

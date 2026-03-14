@@ -185,8 +185,12 @@ class _NoteEditorState extends State<NoteEditorScreen> {
   @override
   void dispose() {
     _titleCtrl.dispose();
-    for (final c in _ctrlMap.values) c.dispose();
-    for (final f in _focusMap.values) f.dispose();
+    for (final c in _ctrlMap.values) {
+      c.dispose();
+    }
+    for (final f in _focusMap.values) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -370,7 +374,7 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                   source: ImageSource.camera, imageQuality: 85);
               if (xf == null || !mounted) return;
               final dest = await _saveImageFile(xf.path);
-              if (dest != null) _insertImageBlock(dest);
+              if (dest != null) { _insertImageBlock(dest); }
             },
           ),
           ListTile(
@@ -382,7 +386,7 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                   source: ImageSource.gallery, imageQuality: 85);
               if (xf == null || !mounted) return;
               final dest = await _saveImageFile(xf.path);
-              if (dest != null) _insertImageBlock(dest);
+              if (dest != null) { _insertImageBlock(dest); }
             },
           ),
           ListTile(
@@ -397,7 +401,7 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                   !mounted) return;
               final dest =
                   await _saveImageFile(result.files.single.path!);
-              if (dest != null) _insertImageBlock(dest);
+              if (dest != null) { _insertImageBlock(dest); }
             },
           ),
         ]),
