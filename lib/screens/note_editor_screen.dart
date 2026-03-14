@@ -434,6 +434,22 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                     data: _bodyCtrl.text,
                     selectable: true,
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    sizedImageBuilder: (MarkdownImageConfig cfg) {
+                      final path = cfg.uri.toString();
+                      if (path.startsWith('/') && File(path).existsSync()) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Image.file(
+                            File(path),
+                            width: cfg.width,
+                            height: cfg.height,
+                            fit: BoxFit.contain,
+                          ),
+                        );
+                      }
+                      return Text('[画像]',
+                          style: TextStyle(color: c.subtext, fontSize: 13));
+                    },
                     styleSheet: MarkdownStyleSheet(
                       p: TextStyle(fontSize: 15, color: c.text, height: 1.8),
                       h1: TextStyle(
