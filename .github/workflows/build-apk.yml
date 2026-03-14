@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -13,34 +15,84 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # ── 1. チェックアウト ──────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      # ── 2. Java セットアップ ───────────────────────────
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # ── 3. Flutter セットアップ ────────────────────────
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: '3.32.0'
           channel: stable
+          cache: true
 
+      # ── 4. バージョン確認 ──────────────────────────────
+      - name: Flutter version
+        run: flutter --version
+
+      # ── 5. 依存関係取得 ────────────────────────────────
       - name: Get dependencies
         run: flutter pub get
 
+      # ── 6. 静的解析 ────────────────────────────────────
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+      # ── 7. ランチャーアイコン生成 ──────────────────────
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
-      - name: Build APK
+      # ── 8. APK ビルド（Debug） ─────────────────────────
+      - name: Build Debug APK
         run: flutter build apk --debug
 
+      # ── 9. APK リネーム ────────────────────────────────
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/Evernote-personal-v${{ github.run_number }}.apk
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          APK_NAME="Evernote-personal-${VERSION}-debug-#${{ github.run_number }}.apk"
+          mv build/app/outputs/flutter-apk/app-debug.apk \
+             "build/app/outputs/flutter-apk/${APK_NAME}"
+          echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
 
-      - name: Upload APK
+      # ── 10. APK アップロード ───────────────────────────
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Evernote-personal-v${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/Evernote-personal-v${{ github.run_number }}.apk
+          name: ${{ env.APK_NAME }}
+          path: build/app/outputs/flutter-apk/${{ env.APK_NAME }}
+          retention-days: 30
+
+      # ── 11. PR にコメント投稿 ──────────────────────────
+      - name: Comment APK link on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const apkName = process.env.APK_NAME;
+            const body = [
+              '## ✅ APK ビルド成功',
+              '',
+              `| 項目 | 内容 |`,
+              `|------|------|`,
+              `| **APK名** | \`${apkName}\` |`,
+              `| **ダウンロード** | [Actionsページ](${runUrl}) の Artifacts から |`,
+              `| **保存期間** | 30日 |`,
+              '',
+              '> Actionsページ → 該当ワークフロー → Artifacts セクションからDLできます。',
+            ].join('\n');
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
