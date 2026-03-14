@@ -130,16 +130,22 @@ class UpNoteImporter {
   // ──────────────────────────────────────────
 
   /// UpNote Markdownをパースして title/body/notebook/tags/created/updated を返す
-  /// YAMLフロントマター形式と <!-- comment --> 形式の両方に対応
+  /// ステップ1: YAMLフロントマター抽出（あれば）
+  /// ステップ2: 残りをコメント形式でパース（## タイトル / <!-- category: --> など）
   Map<String, dynamic> _parseContent(String content, String filePath) {
-    // YAMLフロントマター形式 (---\n...\n---) の処理
+    String workingContent = content;
+    String title = '';
+    String notebook = '';
+    final tags = <String>[];
+    String created = '';
+    String updated = '';
+
+    // ステップ1: YAMLフロントマター (---) を抽出
     if (content.startsWith('---')) {
       final end = content.indexOf('\n---', 3);
       if (end != -1) {
         final fm = content.substring(3, end).trim();
-        final body = content.substring(end + 4).trim();
-        final result = <String, dynamic>{'body': body};
-        final tags = <String>[];
+        workingContent = content.substring(end + 4); // 残りの本文
         bool inTags = false;
         for (final line in fm.split('\n')) {
           if (inTags && line.startsWith('  - ')) {
@@ -152,10 +158,10 @@ class UpNoteImporter {
           final key = line.substring(0, colon).trim();
           final value = line.substring(colon + 1).trim().replaceAll('"', '');
           switch (key) {
-            case 'title': result['title'] = value;
-            case 'created': result['created'] = value;
-            case 'updated': result['updated'] = value;
-            case 'notebook': result['notebook'] = value;
+            case 'title': if (value.isNotEmpty) title = value;
+            case 'created': created = value;
+            case 'updated': updated = value;
+            case 'notebook': if (value.isNotEmpty) notebook = value;
             case 'tags':
               if (value.startsWith('[')) {
                 tags.addAll(value.replaceAll('[', '').replaceAll(']', '')
@@ -165,34 +171,24 @@ class UpNoteImporter {
               }
           }
         }
-        if (tags.isNotEmpty) result['tags'] = tags;
-        result['title'] ??= _titleFromPath(filePath);
-        return result;
       }
     }
 
-    // UpNote コメント形式: ## タイトル + <!-- category: --> + <!-- tags: -->
-    final lines = content.split('\n');
-    String title = '';
-    String category = '';
-    final tags = <String>[];
-    String created = '';
-    String updated = '';
+    // ステップ2: コメント形式をパース（## タイトル / <!-- category: --> など）
+    final lines = workingContent.split('\n');
     final bodyLines = <String>[];
 
     for (final line in lines) {
-      if (line.startsWith('## ') && title.isEmpty) {
-        title = line.replaceFirst('## ', '').trim();
-      } else if (line.startsWith('# ') && title.isEmpty) {
-        title = line.replaceFirst('# ', '').trim();
-      } else if (line.contains('<!-- category:')) {
-        category = RegExp(r'<!--\s*category:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
-      } else if (line.contains('<!-- tags:')) {
+      if ((line.startsWith('## ') || line.startsWith('# ')) && title.isEmpty) {
+        title = line.replaceFirst(RegExp(r'^#{1,2}\s+'), '').trim();
+      } else if (line.contains('<!-- category:') && notebook.isEmpty) {
+        notebook = RegExp(r'<!--\s*category:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+      } else if (line.contains('<!-- tags:') && tags.isEmpty) {
         final t = RegExp(r'<!--\s*tags:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
         tags.addAll(t.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
-      } else if (line.contains('<!-- created:')) {
+      } else if (line.contains('<!-- created:') && created.isEmpty) {
         created = RegExp(r'<!--\s*created:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
-      } else if (line.contains('<!-- updated:')) {
+      } else if (line.contains('<!-- updated:') && updated.isEmpty) {
         updated = RegExp(r'<!--\s*updated:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
       } else {
         bodyLines.add(line);
@@ -202,7 +198,7 @@ class UpNoteImporter {
     return {
       'title': title.isNotEmpty ? title : _titleFromPath(filePath),
       'body': bodyLines.join('\n').trim(),
-      'notebook': category,
+      'notebook': notebook,
       'tags': tags,
       'created': created,
       'updated': updated,
