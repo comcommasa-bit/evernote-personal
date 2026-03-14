@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:path_provider/path_provider.dart';
@@ -54,12 +55,16 @@ class UpNoteImporter {
       if (!file.isFile) continue;
       if (!file.name.endsWith('.md')) continue;
 
-      final content =
-          String.fromCharCodes(file.content as List<int>);
+      final content = utf8.decode(file.content as List<int>, allowMalformed: true);
       final parsed = _parseFrontmatter(content);
 
-      final title = parsed['title'] as String? ?? _titleFromPath(file.name);
       final body = parsed['body'] as String? ?? '';
+      // タイトル優先順: フロントマター > 本文の見出し > ファイル名
+      final fmTitle = parsed['title'] as String?;
+      final headingMatch = RegExp(r'^#{1,3}\s+(.+)', multiLine: true).firstMatch(body);
+      final title = (fmTitle != null && fmTitle.isNotEmpty)
+          ? fmTitle
+          : headingMatch?.group(1)?.trim() ?? _titleFromPath(file.name);
       final notebook = parsed['notebook'] as String? ?? '';
       final tagNames = parsed['tags'] as List<String>? ?? [];
       final createdStr = parsed['created'] as String? ?? '';
