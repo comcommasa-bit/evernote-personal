@@ -191,12 +191,14 @@ class _HomeScreenState extends State<HomeScreen> {
         allowedExtensions: ['zip'],
       );
       if (result == null || result.files.single.path == null) return;
-      final count =
+      final result2 =
           await UpNoteImporter().importZip(result.files.single.path!);
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('UpNoteから $count 件インポートしました')));
+      final notes = result2['notes'] ?? 0;
+      final images = result2['images'] ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('UpNoteから $notes 件、画像 $images 枚インポートしました')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

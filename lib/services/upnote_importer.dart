@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:archive/archive_io.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../database/db_helper.dart';
 import '../models/note.dart';
@@ -11,11 +14,17 @@ class UpNoteImporter {
   final _db = DbHelper();
   final _uuid = const Uuid();
 
+  static const _imageExts = {'.jpg', '.jpeg', '.png', '.webp', '.heic'};
+
   /// ZIPファイルからUpNoteのノートをインポートする
-  /// 戻り値: インポートしたノート数
-  Future<int> importZip(String zipPath) async {
+  /// 戻り値: {'notes': インポートしたノート数, 'images': コピーした画像数}
+  Future<Map<String, int>> importZip(String zipPath) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final imgDir = Directory(p.join(dir.path, 'images'));
+    await imgDir.create(recursive: true);
 
     // 既存フォルダ・タグを取得
     final existingFolders = await _db.getFolders();
@@ -23,14 +32,39 @@ class UpNoteImporter {
     final folderMap = {for (final f in existingFolders) f.name: f.id};
     final tagMap = {for (final t in existingTags) t.name: t.id};
 
-    int count = 0;
+    // 1回のループで画像と.mdを振り分け
+    // imagePathMap: key=ZIPエントリ名(正規化済み), value=ローカルパス
+    final imagePathMap = <String, String>{};
+    final mdFiles = <ArchiveFile>[];
+    int imageCount = 0;
 
     for (final file in archive) {
       if (!file.isFile) continue;
-      if (!file.name.endsWith('.md')) continue;
+      final normalizedName = file.name.replaceAll(r'\', '/');
+      final ext = p.extension(normalizedName).toLowerCase();
 
-      final content = utf8.decode(file.content as List<int>, allowMalformed: true);
-      final parsed = _parseContent(content, file.name);
+      if (_imageExts.contains(ext)) {
+        // UUID付きファイル名で保存して衝突を防ぐ
+        final uniqueName = '${_uuid.v4()}$ext';
+        final dest = p.join(imgDir.path, uniqueName);
+        await File(dest)
+            .writeAsBytes(Uint8List.fromList(file.content as List<int>));
+        // ZIPエントリ名（正規化）とファイル名だけの両方でひける
+        imagePathMap[normalizedName] = dest;
+        imagePathMap[p.basename(normalizedName)] = dest;
+        imageCount++;
+      } else if (normalizedName.endsWith('.md')) {
+        mdFiles.add(file);
+      }
+    }
+
+    int noteCount = 0;
+
+    for (final file in mdFiles) {
+      final content = utf8.decode(Uint8List.fromList(file.content as List<int>),
+          allowMalformed: true);
+      final normalizedName = file.name.replaceAll(r'\', '/');
+      final parsed = _parseContent(content, normalizedName, imagePathMap);
 
       final title = parsed['title'] as String;
       final body = parsed['body'] as String;
@@ -38,8 +72,9 @@ class UpNoteImporter {
       final tagNames = parsed['tags'] as List<String>? ?? [];
       final createdStr = parsed['created'] as String? ?? '';
       final updatedStr = parsed['updated'] as String? ?? '';
+      final noteImagePaths = parsed['imagePaths'] as List<String>? ?? [];
 
-      // フォルダ解決（なければ作成）
+      // フォルダ解決
       String folderId =
           existingFolders.isNotEmpty ? existingFolders.first.id : '';
       if (notebook.isNotEmpty) {
@@ -54,7 +89,7 @@ class UpNoteImporter {
         }
       }
 
-      // タグ解決（なければ作成）
+      // タグ解決
       final tagIds = <String>[];
       for (final name in tagNames) {
         if (name.isEmpty) continue;
@@ -75,26 +110,24 @@ class UpNoteImporter {
         body: body,
         folderId: folderId,
         tagIds: tagIds,
-        imagePaths: const [],
+        imagePaths: noteImagePaths,
         createdAt: _parseDate(createdStr) ?? now,
         updatedAt: _parseDate(updatedStr) ?? now,
       );
 
       await _db.insertNote(note);
-      count++;
+      noteCount++;
     }
 
-    return count;
+    return {'notes': noteCount, 'images': imageCount};
   }
 
   // ──────────────────────────────────────────
   // private helpers
   // ──────────────────────────────────────────
 
-  /// UpNote Markdownをパースして title/body/notebook/tags/created/updated を返す
-  /// ステップ1: YAMLフロントマター抽出（あれば）
-  /// ステップ2: 残りをコメント形式でパース（## タイトル / <!-- category: --> など）
-  Map<String, dynamic> _parseContent(String content, String filePath) {
+  Map<String, dynamic> _parseContent(
+      String content, String filePath, Map<String, String> imagePathMap) {
     String workingContent = content;
     String title = '';
     String notebook = '';
@@ -102,12 +135,12 @@ class UpNoteImporter {
     String created = '';
     String updated = '';
 
-    // ステップ1: YAMLフロントマター (---) を抽出
+    // ステップ1: YAMLフロントマター
     if (content.startsWith('---')) {
       final end = content.indexOf('\n---', 3);
       if (end != -1) {
         final fm = content.substring(3, end).trim();
-        workingContent = content.substring(end + 4); // 残りの本文
+        workingContent = content.substring(end + 4);
         bool inTags = false;
         for (final line in fm.split('\n')) {
           if (inTags && line.startsWith('  - ')) {
@@ -120,14 +153,22 @@ class UpNoteImporter {
           final key = line.substring(0, colon).trim();
           final value = line.substring(colon + 1).trim().replaceAll('"', '');
           switch (key) {
-            case 'title': if (value.isNotEmpty) title = value;
-            case 'created': created = value;
-            case 'updated': updated = value;
-            case 'notebook': if (value.isNotEmpty) notebook = value;
+            case 'title':
+              if (value.isNotEmpty) title = value;
+            case 'created':
+              created = value;
+            case 'updated':
+              updated = value;
+            case 'notebook':
+              if (value.isNotEmpty) notebook = value;
             case 'tags':
               if (value.startsWith('[')) {
-                tags.addAll(value.replaceAll('[', '').replaceAll(']', '')
-                    .split(',').map((e) => e.trim().replaceAll('"', '')).where((e) => e.isNotEmpty));
+                tags.addAll(value
+                    .replaceAll('[', '')
+                    .replaceAll(']', '')
+                    .split(',')
+                    .map((e) => e.trim().replaceAll('"', ''))
+                    .where((e) => e.isNotEmpty));
               } else if (value.isEmpty) {
                 inTags = true;
               }
@@ -136,7 +177,7 @@ class UpNoteImporter {
       }
     }
 
-    // ステップ2: コメント形式をパース（## タイトル / <!-- category: --> など）
+    // ステップ2: コメント形式
     final lines = workingContent.split('\n');
     final bodyLines = <String>[];
 
@@ -144,26 +185,58 @@ class UpNoteImporter {
       if ((line.startsWith('## ') || line.startsWith('# ')) && title.isEmpty) {
         title = line.replaceFirst(RegExp(r'^#{1,2}\s+'), '').trim();
       } else if (line.contains('<!-- category:') && notebook.isEmpty) {
-        notebook = RegExp(r'<!--\s*category:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+        notebook = RegExp(r'<!--\s*category:\s*(.+?)\s*-->')
+                .firstMatch(line)
+                ?.group(1) ??
+            '';
       } else if (line.contains('<!-- tags:') && tags.isEmpty) {
-        final t = RegExp(r'<!--\s*tags:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
-        tags.addAll(t.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
+        final t =
+            RegExp(r'<!--\s*tags:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ??
+                '';
+        tags.addAll(
+            t.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
       } else if (line.contains('<!-- created:') && created.isEmpty) {
-        created = RegExp(r'<!--\s*created:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+        created = RegExp(r'<!--\s*created:\s*(.+?)\s*-->')
+                .firstMatch(line)
+                ?.group(1) ??
+            '';
       } else if (line.contains('<!-- updated:') && updated.isEmpty) {
-        updated = RegExp(r'<!--\s*updated:\s*(.+?)\s*-->').firstMatch(line)?.group(1) ?? '';
+        updated = RegExp(r'<!--\s*updated:\s*(.+?)\s*-->')
+                .firstMatch(line)
+                ?.group(1) ??
+            '';
       } else {
         bodyLines.add(line);
       }
     }
 
+    // ステップ3: 画像パスを解決（バックスラッシュ対応）
+    final noteImagePaths = <String>[];
+    final bodyText = bodyLines.join('\n');
+    final resolvedBody = bodyText.replaceAllMapped(
+      RegExp(r'!\[.*?\]\((.*?)\)'),
+      (m) {
+        final raw = m.group(1) ?? '';
+        final ref = raw.replaceAll(r'\', '/');
+        final localPath = imagePathMap[ref] ?? imagePathMap[p.basename(ref)];
+        if (localPath != null) {
+          if (!noteImagePaths.contains(localPath)) {
+            noteImagePaths.add(localPath);
+          }
+          return '![]($localPath)';
+        }
+        return '[画像]';
+      },
+    ).trim();
+
     return {
       'title': title.isNotEmpty ? title : _titleFromPath(filePath),
-      'body': bodyLines.join('\n').replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '[画像]').trim(),
+      'body': resolvedBody,
       'notebook': notebook,
       'tags': tags,
       'created': created,
       'updated': updated,
+      'imagePaths': noteImagePaths,
     };
   }
 
@@ -175,7 +248,6 @@ class UpNoteImporter {
   DateTime? _parseDate(String s) {
     if (s.isEmpty) return null;
     try {
-      // "2023-01-15 10:30:00" -> "2023-01-15T10:30:00"
       return DateTime.parse(s.replaceFirst(' ', 'T'));
     } catch (_) {
       return null;

@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 import '../app_theme.dart';
 import '../database/db_helper.dart';
 import '../models/note.dart';
@@ -65,24 +67,129 @@ class _NoteEditorState extends State<NoteEditorScreen> {
     widget.onSaved(updated);
   }
 
-  Future<void> _pickImage() async {
-    final xf =
-        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (xf == null) return;
+  // ────────────── ツールバー ──────────────
+
+  void _applyMarkdown(String prefix, String suffix) {
+    final text = _bodyCtrl.text;
+    final sel = _bodyCtrl.selection;
+    if (!sel.isValid) {
+      final insert = '$prefix$suffix';
+      _bodyCtrl.value = TextEditingValue(
+        text: text + insert,
+        selection: TextSelection.collapsed(offset: text.length + prefix.length),
+      );
+    } else {
+      final selected = sel.textInside(text);
+      final replaced = '$prefix$selected$suffix';
+      final newText = text.replaceRange(sel.start, sel.end, replaced);
+      _bodyCtrl.value = TextEditingValue(
+        text: newText,
+        selection:
+            TextSelection.collapsed(offset: sel.start + replaced.length),
+      );
+    }
+    setState(() => _changed = true);
+  }
+
+  void _applyLinePrefix(String prefix) {
+    final text = _bodyCtrl.text;
+    final sel = _bodyCtrl.selection;
+    final pos = sel.isValid ? sel.baseOffset : text.length;
+    final lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+    final newText =
+        text.substring(0, lineStart) + prefix + text.substring(lineStart);
+    _bodyCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: pos + prefix.length),
+    );
+    setState(() => _changed = true);
+  }
+
+  // ────────────── 画像 ──────────────
+
+  Future<String?> _saveImage(String srcPath) async {
     final dir = await getApplicationDocumentsDirectory();
-    final dest = p.join(dir.path, 'note_images', p.basename(xf.path));
+    final dest = p.join(dir.path, 'images', p.basename(srcPath));
     await Directory(p.dirname(dest)).create(recursive: true);
-    await File(xf.path).copy(dest);
+    await File(srcPath).copy(dest);
+    return dest;
+  }
+
+  void _insertImagePath(String path) {
+    final text = _bodyCtrl.text;
+    final sel = _bodyCtrl.selection;
+    final insert = '![]($path)\n';
+    final pos = sel.isValid ? sel.baseOffset : text.length;
+    final newText = text.substring(0, pos) + insert + text.substring(pos);
+    _bodyCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: pos + insert.length),
+    );
     setState(() {
-      _note = _note.copyWith(imagePaths: [..._note.imagePaths, dest]);
+      _note = _note.copyWith(imagePaths: [..._note.imagePaths, path]);
       _changed = true;
     });
+  }
+
+  Future<void> _pickImage() async {
+    final c = context.read<ThemeNotifier>().colors;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.camera_alt_outlined, color: c.icon),
+            title: Text('カメラで撮影', style: TextStyle(color: c.text)),
+            onTap: () async {
+              Navigator.pop(context);
+              final status = await Permission.camera.request();
+              if (!status.isGranted) return;
+              final xf = await _picker.pickImage(
+                  source: ImageSource.camera, imageQuality: 85);
+              if (xf == null) return;
+              final dest = await _saveImage(xf.path);
+              if (dest != null) _insertImagePath(dest);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.photo_library_outlined, color: c.icon),
+            title: Text('ギャラリーから選択', style: TextStyle(color: c.text)),
+            onTap: () async {
+              Navigator.pop(context);
+              final xf = await _picker.pickImage(
+                  source: ImageSource.gallery, imageQuality: 85);
+              if (xf == null) return;
+              final dest = await _saveImage(xf.path);
+              if (dest != null) _insertImagePath(dest);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.folder_open_outlined, color: c.icon),
+            title: Text('ファイルから選択', style: TextStyle(color: c.text)),
+            onTap: () async {
+              Navigator.pop(context);
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.image,
+                allowMultiple: false,
+              );
+              if (result == null || result.files.single.path == null) return;
+              final dest = await _saveImage(result.files.single.path!);
+              if (dest != null) _insertImagePath(dest);
+            },
+          ),
+        ]),
+      ),
+    );
   }
 
   Future<void> _removeImage(String path) async {
     setState(() {
       _note = _note.copyWith(
-          imagePaths: _note.imagePaths.where((p) => p != path).toList());
+          imagePaths: _note.imagePaths.where((e) => e != path).toList());
       _changed = true;
     });
   }
@@ -102,6 +209,16 @@ class _NoteEditorState extends State<NoteEditorScreen> {
       .firstWhere((f) => f.id == id,
           orElse: () => const Folder(id: '', name: ''))
       .name;
+
+  Widget _tbBtn(IconData icon, VoidCallback onTap) {
+    final c = context.read<ThemeNotifier>().colors;
+    return IconButton(
+      icon: Icon(icon, size: 18, color: c.icon),
+      onPressed: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      constraints: const BoxConstraints(),
+    );
+  }
 
   @override
   Widget build(BuildContext ctx) {
@@ -194,7 +311,6 @@ class _NoteEditorState extends State<NoteEditorScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
             child: Row(children: [
-              // フォルダ選択
               PopupMenuButton<String>(
                 child: Container(
                   padding:
@@ -260,7 +376,6 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                       ]),
                     ),
                   )),
-              // タグ追加
               PopupMenuButton<String>(
                 child: Container(
                   padding:
@@ -301,24 +416,13 @@ class _NoteEditorState extends State<NoteEditorScreen> {
             color: c.card,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
-              for (final icon in [
-                Icons.format_bold,
-                Icons.format_italic,
-                Icons.format_underline,
-                Icons.format_list_bulleted,
-                Icons.format_list_numbered,
-              ])
-                IconButton(
-                    icon: Icon(icon, size: 18, color: c.icon),
-                    onPressed: () {},
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    constraints: const BoxConstraints()),
+              _tbBtn(Icons.format_bold, () => _applyMarkdown('**', '**')),
+              _tbBtn(Icons.format_italic, () => _applyMarkdown('*', '*')),
+              _tbBtn(Icons.format_underline, () => _applyMarkdown('__', '__')),
+              _tbBtn(Icons.format_list_bulleted, () => _applyLinePrefix('- ')),
+              _tbBtn(Icons.format_list_numbered, () => _applyLinePrefix('1. ')),
               const Spacer(),
-              IconButton(
-                  icon: Icon(Icons.image_outlined, size: 18, color: c.icon),
-                  onPressed: _pickImage,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints()),
+              _tbBtn(Icons.image_outlined, _pickImage),
             ]),
           ),
           Divider(height: 1, color: c.border),
@@ -332,13 +436,25 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                     styleSheet: MarkdownStyleSheet(
                       p: TextStyle(fontSize: 15, color: c.text, height: 1.8),
-                      h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: c.text),
-                      h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: c.text),
-                      h3: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.text),
-                      strong: TextStyle(fontWeight: FontWeight.bold, color: c.text),
-                      em: TextStyle(fontStyle: FontStyle.italic, color: c.text),
+                      h1: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: c.text),
+                      h2: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: c.text),
+                      h3: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: c.text),
+                      strong: TextStyle(
+                          fontWeight: FontWeight.bold, color: c.text),
+                      em: TextStyle(
+                          fontStyle: FontStyle.italic, color: c.text),
                       blockquoteDecoration: BoxDecoration(
-                        border: Border(left: BorderSide(color: c.accent, width: 4)),
+                        border: Border(
+                            left: BorderSide(color: c.accent, width: 4)),
                         color: c.accentSoft,
                       ),
                       code: TextStyle(
@@ -359,7 +475,8 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                       hintText: 'メモを入力...',
                       hintStyle: TextStyle(color: c.subtext, fontSize: 15),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      contentPadding:
+                          const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     ),
                   ),
           ),
@@ -415,7 +532,8 @@ class _NoteEditorState extends State<NoteEditorScreen> {
                 Icon(Icons.add_photo_alternate_outlined,
                     size: 16, color: c.icon),
                 const SizedBox(width: 6),
-                Text('画像を追加', style: TextStyle(fontSize: 12, color: c.subtext)),
+                Text('画像を追加',
+                    style: TextStyle(fontSize: 12, color: c.subtext)),
               ]),
             ),
           ),
