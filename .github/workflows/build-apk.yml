@@ -10,6 +10,11 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions:
+  contents: write      # Releases へのアップロードに必要
+  pull-requests: write # PRコメント投稿に必要
+  issues: write        # PRコメント投稿に必要
+
 jobs:
   build:
     runs-on: ubuntu-latest
