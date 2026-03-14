@@ -15,6 +15,36 @@ import 'note_editor_screen.dart';
 
 const _uuid = Uuid();
 
+/// ブロック形式のbodyからプレビュー用のプレーンテキストを抽出
+String _extractBodyPreview(String body) {
+  const prefix = '[[BLOCKS]]';
+  if (!body.startsWith(prefix)) return body;
+  try {
+    final jsonStr = body.substring(prefix.length);
+    final list = jsonDecode(jsonStr) as List;
+    final parts = <String>[];
+    for (final item in list) {
+      final map = Map<String, dynamic>.from(item as Map);
+      final type = map['type'] as String? ?? 'text';
+      final text = map['text'] as String? ?? '';
+      if (type == 'image') {
+        parts.add('[画像]');
+      } else if (type == 'checkbox') {
+        final checked = map['checked'] as bool? ?? false;
+        parts.add('${checked ? '☑' : '☐'} $text');
+      } else if (type == 'numberedList') {
+        final num = map['listNumber'] as int? ?? 1;
+        parts.add('$num. $text');
+      } else if (text.isNotEmpty) {
+        parts.add(text);
+      }
+    }
+    return parts.join(' ');
+  } catch (_) {
+    return body;
+  }
+}
+
 enum SortMode { updated, created, name, tag }
 
 String _sortLabel(SortMode s) {
@@ -155,7 +185,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _emptyTrash() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('ゴミ箱を空にする'),
+        content: const Text(
+            'ゴミ箱内のすべてのメモを完全に削除します。\nこの操作は取り消せません。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('すべて削除',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _db.emptyTrash();
+      _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('ゴミ箱を空にしました')));
+    }
+  }
+
   Future<void> _exportData() async {
+    // チュートリアル表示
+    final proceed = await _showTutorial(
+      title: 'エクスポートとは？',
+      icon: Icons.upload_outlined,
+      steps: const [
+        'ノート・フォルダ・タグをすべてJSONファイルに保存します。',
+        '保存先はアプリ内ドキュメントフォルダです。',
+        'バックアップや機種変更のデータ移行に使えます。',
+        '「インポート」で同じ端末や別の端末に復元できます。',
+      ],
+      proceedLabel: 'エクスポートする',
+    );
+    if (proceed != true) return;
     try {
       final data = await _db.exportAll();
       final json = const JsonEncoder.withIndent('  ').convert(data);
@@ -185,18 +257,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _importUpNote() async {
+    // チュートリアル表示
+    final proceed = await _showTutorial(
+      title: 'UpNoteインポートとは？',
+      icon: Icons.folder_zip_outlined,
+      steps: const [
+        'UpNoteのバックアップZIPファイルからノートを取り込みます。',
+        'UpNoteアプリ → 設定 → バックアップ → 「エクスポート」でZIPを作成してください。',
+        'ZIPの中にある .md（Markdown）ファイルを自動解析します。',
+        'ノートブック名はフォルダとして、タグもそのまま引き継ぎます。',
+        '画像ファイル（jpg/png/webp等）も自動でインポートされます。',
+      ],
+      proceedLabel: 'ZIPを選択する',
+    );
+    if (proceed != true) return;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['zip'],
       );
       if (result == null || result.files.single.path == null) return;
-      final count =
+      final result2 =
           await UpNoteImporter().importZip(result.files.single.path!);
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('UpNoteから $count 件インポートしました')));
+      final notes = result2['notes'] ?? 0;
+      final images = result2['images'] ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('UpNoteから $notes 件、画像 $images 枚インポートしました')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -205,6 +293,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _importData() async {
+    // チュートリアル表示
+    final proceed = await _showTutorial(
+      title: 'インポートとは？',
+      icon: Icons.download_outlined,
+      steps: const [
+        'このアプリの「エクスポート」で作ったJSONファイルを読み込みます。',
+        'フォルダ・タグ・ノートがすべて復元されます。',
+        '既存のデータと重複する場合は上書きされます。',
+        'ファイルマネージャーで保存先のJSONを選択してください。',
+      ],
+      proceedLabel: 'ファイルを選択する',
+    );
+    if (proceed != true) return;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -224,6 +325,75 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('インポートに失敗しました: $e')));
     }
+  }
+
+  /// インポート/エクスポート共通チュートリアルダイアログ
+  Future<bool?> _showTutorial({
+    required String title,
+    required IconData icon,
+    required List<String> steps,
+    required String proceedLabel,
+  }) {
+    final c = context.read<ThemeNotifier>().colors;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(children: [
+          Icon(icon, size: 22, color: c.accent),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700))),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...steps.asMap().entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(right: 8, top: 1),
+                        decoration: BoxDecoration(
+                            color: c.accent, shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            '${e.key + 1}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                          child: Text(e.value,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: c.text,
+                                  height: 1.5))),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(proceedLabel),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showThemeSelector() {
@@ -338,6 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
           count: _filtered.length,
           onRestoreNote: _restoreNote,
           onHardDeleteNote: _hardDeleteNote,
+          onEmptyTrash: _emptyTrash,
           onExport: _exportData,
           onImport: _importData,
           onImportUpNote: _importUpNote,
@@ -757,6 +928,7 @@ class _NoteList extends StatelessWidget {
   final VoidCallback onNewNote;
   final Function(String) onRestoreNote;
   final Function(String) onHardDeleteNote;
+  final VoidCallback onEmptyTrash;
   final VoidCallback onExport;
   final VoidCallback onImport;
   final VoidCallback onImportUpNote;
@@ -776,6 +948,7 @@ class _NoteList extends StatelessWidget {
     required this.onNewNote,
     required this.onRestoreNote,
     required this.onHardDeleteNote,
+    required this.onEmptyTrash,
     required this.onExport,
     required this.onImport,
     required this.onImportUpNote,
@@ -888,10 +1061,23 @@ class _NoteList extends StatelessWidget {
                     color: c.subtext,
                     fontWeight: FontWeight.w600)),
             const Spacer(),
-            if (!showTrash)
+            if (showTrash && count > 0)
+              TextButton.icon(
+                onPressed: onEmptyTrash,
+                icon: const Icon(Icons.delete_forever, size: 14, color: Colors.red),
+                label: const Text('すべて空にする',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                ),
+              )
+            else if (!showTrash)
               IconButton(
-                  icon:
-                      Icon(Icons.add_circle_outline, size: 18, color: c.accent),
+                  icon: Icon(Icons.add_circle_outline, size: 18, color: c.accent),
                   onPressed: onNewNote,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints()),
@@ -923,20 +1109,20 @@ class _NoteList extends StatelessWidget {
                       // サムネイル
                       if (n.imagePaths.isNotEmpty) ...[
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                           child: Image.file(
                             File(n.imagePaths.first),
-                            width: 50,
-                            height: 38,
+                            width: 72,
+                            height: 56,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
-                              width: 50,
-                              height: 38,
+                              width: 72,
+                              height: 56,
                               decoration: BoxDecoration(
                                   color: c.input,
-                                  borderRadius: BorderRadius.circular(6)),
+                                  borderRadius: BorderRadius.circular(8)),
                               child: Icon(Icons.image_outlined,
-                                  size: 18, color: c.icon),
+                                  size: 22, color: c.icon),
                             ),
                           ),
                         ),
@@ -962,7 +1148,9 @@ class _NoteList extends StatelessWidget {
                             ]),
                             const SizedBox(height: 3),
                             Text(
-                              n.body.isEmpty ? '（本文なし）' : n.body,
+                              n.body.isEmpty
+                                  ? '（本文なし）'
+                                  : _extractBodyPreview(n.body),
                               style: TextStyle(fontSize: 11, color: c.subtext),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
