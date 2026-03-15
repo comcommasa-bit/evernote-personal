@@ -4,11 +4,12 @@ import 'app_theme.dart';
 import 'screens/lock_screen.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final savedTheme = await ThemeNotifier.loadSaved();
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(),
+      create: (_) => ThemeNotifier(savedTheme),
       child: const App(),
     ),
   );

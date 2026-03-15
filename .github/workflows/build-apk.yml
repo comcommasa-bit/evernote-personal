@@ -24,7 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: '3.41.4'
           channel: stable
 
       - name: Get dependencies
@@ -33,14 +33,32 @@ jobs:
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
-      - name: Build APK
-        run: flutter build apk --debug
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/Evernote-personal-v${{ github.run_number }}.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/evernote-personal-v${{ steps.version.outputs.version }}.apk
 
-      - name: Upload APK
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Evernote-personal-v${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/Evernote-personal-v${{ github.run_number }}.apk
+          name: evernote-personal-v${{ steps.version.outputs.version }}
+          path: build/app/outputs/flutter-apk/evernote-personal-v${{ steps.version.outputs.version }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: |
+            ## v${{ steps.version.outputs.version }}
+            - テーマ選択の永続化（ログアウト後も維持）
+            - サイドバーをスライド開閉式に（‹/›ボタン）
+          files: build/app/outputs/flutter-apk/evernote-personal-v${{ steps.version.outputs.version }}.apk
+          make_latest: true

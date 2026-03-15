@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum AppThemeMode { white, dark, purple, blue, orange }
 
@@ -84,12 +86,38 @@ class AppThemeData {
 }
 
 class ThemeNotifier extends ChangeNotifier {
-  AppThemeMode _mode = AppThemeMode.white;
+  AppThemeMode _mode;
   AppThemeMode get mode => _mode;
   AppColors get colors => AppThemeData.of(_mode);
+
+  ThemeNotifier(AppThemeMode initial) : _mode = initial;
+
+  static Future<AppThemeMode> loadSaved() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/theme_preference.txt');
+      if (await file.exists()) {
+        final name = (await file.readAsString()).trim();
+        return AppThemeMode.values.firstWhere(
+          (m) => m.name == name,
+          orElse: () => AppThemeMode.white,
+        );
+      }
+    } catch (_) {}
+    return AppThemeMode.white;
+  }
 
   void setMode(AppThemeMode m) {
     _mode = m;
     notifyListeners();
+    _save(m);
+  }
+
+  Future<void> _save(AppThemeMode m) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/theme_preference.txt');
+      await file.writeAsString(m.name);
+    } catch (_) {}
   }
 }

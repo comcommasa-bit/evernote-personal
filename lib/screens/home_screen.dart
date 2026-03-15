@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   SortMode _sort = SortMode.updated;
   Note? _selected;
   bool _showTrash = false;
+  bool _sidebarOpen = true;
 
   @override
   void initState() {
@@ -275,52 +276,62 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: c.bg,
       body: SafeArea(
         child: Row(children: [
-        _Sidebar(
-          colors: c,
-          folders: _folders,
-          tags: _tags,
-          activeFolderId: _activeFolderId,
-          activeTagId: _activeTagId,
-          showTrash: _showTrash,
-          onFolderTap: (id) => setState(() {
-            _activeFolderId = id;
-            _activeTagId = null;
-            _showTrash = false;
-          }),
-          onTagTap: (id) => setState(() {
-            _activeTagId = _activeTagId == id ? null : id;
-            _activeFolderId = null;
-            _showTrash = false;
-          }),
-          onTrashTap: () => setState(() {
-            _showTrash = true;
-            _activeFolderId = null;
-            _activeTagId = null;
-          }),
-          onFoldersReordered: (f) async {
-            _folders = f;
-            await _db.reorderFolders(f);
-            setState(() {});
-          },
-          onFolderAdded: (name) async {
-            await _db.insertFolder(
-                Folder(id: _uuid.v4(), name: name, sortOrder: _folders.length));
-            _load();
-          },
-          onFolderRenamed: (f) async {
-            await _db.updateFolder(f);
-            _load();
-          },
-          onTagAdded: (name) async {
-            await _db.insertTag(Tag(id: _uuid.v4(), name: name));
-            _load();
-          },
-          onTagRenamed: (t) async {
-            await _db.updateTag(t);
-            _load();
-          },
-          onNewNote: _newNote,
-          onTheme: _showThemeSelector,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          width: _sidebarOpen ? 200.0 : 0.0,
+          clipBehavior: Clip.hardEdge,
+          decoration: const BoxDecoration(),
+          child: SizedBox(
+            width: 200,
+            child: _Sidebar(
+              colors: c,
+              folders: _folders,
+              tags: _tags,
+              activeFolderId: _activeFolderId,
+              activeTagId: _activeTagId,
+              showTrash: _showTrash,
+              onFolderTap: (id) => setState(() {
+                _activeFolderId = id;
+                _activeTagId = null;
+                _showTrash = false;
+              }),
+              onTagTap: (id) => setState(() {
+                _activeTagId = _activeTagId == id ? null : id;
+                _activeFolderId = null;
+                _showTrash = false;
+              }),
+              onTrashTap: () => setState(() {
+                _showTrash = true;
+                _activeFolderId = null;
+                _activeTagId = null;
+              }),
+              onFoldersReordered: (f) async {
+                _folders = f;
+                await _db.reorderFolders(f);
+                setState(() {});
+              },
+              onFolderAdded: (name) async {
+                await _db.insertFolder(
+                    Folder(id: _uuid.v4(), name: name, sortOrder: _folders.length));
+                _load();
+              },
+              onFolderRenamed: (f) async {
+                await _db.updateFolder(f);
+                _load();
+              },
+              onTagAdded: (name) async {
+                await _db.insertTag(Tag(id: _uuid.v4(), name: name));
+                _load();
+              },
+              onTagRenamed: (t) async {
+                await _db.updateTag(t);
+                _load();
+              },
+              onNewNote: _newNote,
+              onTheme: _showThemeSelector,
+            ),
+          ),
         ),
         _NoteList(
           colors: c,
@@ -330,6 +341,8 @@ class _HomeScreenState extends State<HomeScreen> {
           sort: _sort,
           search: _search,
           showTrash: _showTrash,
+          sidebarOpen: _sidebarOpen,
+          onToggleSidebar: () => setState(() => _sidebarOpen = !_sidebarOpen),
           onSearchChanged: (v) => setState(() => _search = v),
           onSortChanged: (s) => setState(() => _sort = s),
           onNoteTap: (n) {
@@ -753,6 +766,8 @@ class _NoteList extends StatelessWidget {
   final String search;
   final int count;
   final bool showTrash;
+  final bool sidebarOpen;
+  final VoidCallback onToggleSidebar;
   final Function(String) onSearchChanged;
   final Function(SortMode) onSortChanged;
   final Function(Note) onNoteTap;
@@ -772,6 +787,8 @@ class _NoteList extends StatelessWidget {
     required this.search,
     required this.count,
     required this.showTrash,
+    required this.sidebarOpen,
+    required this.onToggleSidebar,
     required this.onSearchChanged,
     required this.onSortChanged,
     required this.onNoteTap,
@@ -797,8 +814,21 @@ class _NoteList extends StatelessWidget {
         Container(
           height: 52,
           color: c.header,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(children: [
+            // サイドバー開閉トグル
+            GestureDetector(
+              onTap: onToggleSidebar,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  sidebarOpen ? Icons.chevron_left : Icons.chevron_right,
+                  size: 20,
+                  color: c.icon,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             Expanded(
                 child: Container(
               decoration: BoxDecoration(
