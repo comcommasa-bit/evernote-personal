@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../services/auth_service.dart';
 
 class LockScreen extends StatefulWidget {
@@ -109,7 +109,7 @@ class _LockScreenState extends State<LockScreen> {
                 // ── タイトル ──
                 Text(
                   'Evernote-personal',
-                  style: GoogleFonts.notoSansJp(
+                  style: TextStyle(fontFamily: 'NotoSansJP',
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF3A1F6E),
@@ -123,13 +123,13 @@ class _LockScreenState extends State<LockScreen> {
                   controller: _pwCtrl,
                   obscureText: _obscure,
                   onSubmitted: (_) => _checkPassword(),
-                  style: GoogleFonts.notoSansJp(
+                  style: TextStyle(fontFamily: 'NotoSansJP',
                     fontSize: 15,
                     color: const Color(0xFF1A1A1A),
                   ),
                   decoration: InputDecoration(
                     hintText: 'パスワードを入力',
-                    hintStyle: GoogleFonts.notoSansJp(
+                    hintStyle: TextStyle(fontFamily: 'NotoSansJP',
                         color: const Color(0xFFAAAAAA), fontSize: 14),
                     filled: true,
                     fillColor: Colors.white,
@@ -162,7 +162,7 @@ class _LockScreenState extends State<LockScreen> {
                           setState(() => _obscure = !_obscure),
                     ),
                     errorText: _error,
-                    errorStyle: GoogleFonts.notoSansJp(fontSize: 12),
+                    errorStyle: TextStyle(fontFamily: 'NotoSansJP',fontSize: 12),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -184,7 +184,7 @@ class _LockScreenState extends State<LockScreen> {
                     ),
                     child: Text(
                       'ログイン',
-                      style: GoogleFonts.notoSansJp(
+                      style: TextStyle(fontFamily: 'NotoSansJP',
                           fontSize: 16, fontWeight: FontWeight.w700,
                           color: Colors.white),
                     ),
@@ -225,7 +225,7 @@ class _LockScreenState extends State<LockScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _fpActive ? '認証中...' : '指紋でログイン',
-                    style: GoogleFonts.notoSansJp(
+                    style: TextStyle(fontFamily: 'NotoSansJP',
                         fontSize: 12, color: const Color(0xFF888888)),
                   ),
                 ] else ...[
@@ -237,7 +237,7 @@ class _LockScreenState extends State<LockScreen> {
                     },
                     child: Text(
                       'クリア',
-                      style: GoogleFonts.notoSansJp(
+                      style: TextStyle(fontFamily: 'NotoSansJP',
                           color: const Color(0xFF999999), fontSize: 13),
                     ),
                   ),

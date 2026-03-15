@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 
 enum AppThemeMode { white, dark, purple, blue, orange }
@@ -72,10 +71,10 @@ class AppThemeData {
 
   static ThemeData toMaterialTheme(AppThemeMode m) {
     final c = themes[m]!;
-    final baseTextTheme = GoogleFonts.notoSansJpTextTheme();
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: c.bg,
+      fontFamily: 'NotoSansJP',
       colorScheme: ColorScheme(
         brightness: m == AppThemeMode.dark ? Brightness.dark : Brightness.light,
         primary: c.accent, onPrimary: c.accentText,
@@ -83,11 +82,6 @@ class AppThemeData {
         surface: c.card, onSurface: c.text,
         error: Colors.red, onError: Colors.white,
       ),
-      textTheme: baseTextTheme.apply(
-        bodyColor: c.text,
-        displayColor: c.text,
-      ),
-      fontFamily: GoogleFonts.notoSansJp().fontFamily,
     );
   }
 }

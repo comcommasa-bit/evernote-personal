@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -342,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
           Expanded(
               child: Text(title,
-                  style: GoogleFonts.notoSansJp(
+                  style: TextStyle(fontFamily: 'NotoSansJP',
                       fontSize: 16, fontWeight: FontWeight.w700))),
         ]),
         content: Column(
@@ -363,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Center(
                           child: Text(
                             '${e.key + 1}',
-                            style: GoogleFonts.notoSansJp(
+                            style: TextStyle(fontFamily: 'NotoSansJP',
                                 color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold),
@@ -372,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Expanded(
                           child: Text(e.value,
-                              style: GoogleFonts.notoSansJp(
+                              style: TextStyle(fontFamily: 'NotoSansJP',
                                   fontSize: 13, color: c.text, height: 1.5))),
                     ],
                   ),
@@ -414,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final notifier = ctx.read<ThemeNotifier>();
         final current = notifier.mode;
         return AlertDialog(
-          title: Text('テーマ', style: GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w700)),
+          title: Text('テーマ', style: TextStyle(fontFamily: 'NotoSansJP',fontSize: 16, fontWeight: FontWeight.w700)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -459,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                         child: Text(labels[mode]!,
-                            style: GoogleFonts.notoSansJp(
+                            style: TextStyle(fontFamily: 'NotoSansJP',
                                 fontSize: 14,
                                 fontWeight: isActive
                                     ? FontWeight.w700
@@ -642,7 +642,7 @@ class _SidebarState extends State<_Sidebar> {
             const SizedBox(width: 8),
             Expanded(
                 child: Text('Evernote-personal',
-                    style: GoogleFonts.notoSansJp(
+                    style: TextStyle(fontFamily: 'NotoSansJP',
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
                         color: c.accent))),
@@ -671,7 +671,7 @@ class _SidebarState extends State<_Sidebar> {
                   const Icon(Icons.add, size: 15),
                   const SizedBox(width: 4),
                   Text('新規メモ',
-                      style: GoogleFonts.notoSansJp(
+                      style: TextStyle(fontFamily: 'NotoSansJP',
                           fontSize: 12, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -814,7 +814,7 @@ class _SidebarState extends State<_Sidebar> {
                         color: widget.showTrash ? c.accent : c.icon),
                     const SizedBox(width: 6),
                     Text('ゴミ箱',
-                        style: GoogleFonts.notoSansJp(
+                        style: TextStyle(fontFamily: 'NotoSansJP',
                             fontSize: 12,
                             color: widget.showTrash ? c.activeText : c.subtext,
                             fontWeight: widget.showTrash
@@ -887,7 +887,7 @@ class _NavTile extends StatelessWidget {
             const SizedBox(width: 7),
             Expanded(
                 child: Text(label,
-                    style: GoogleFonts.notoSansJp(
+                    style: TextStyle(fontFamily: 'NotoSansJP',
                       fontSize: 12,
                       color: isActive ? c.activeText : c.text,
                       fontWeight:
@@ -918,7 +918,7 @@ class _SectionHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 10, 8, 2),
         child: Row(children: [
           Text(label,
-              style: GoogleFonts.notoSansJp(
+              style: TextStyle(fontFamily: 'NotoSansJP',
                   fontSize: 10,
                   color: c.subtext,
                   fontWeight: FontWeight.w700,
@@ -973,7 +973,7 @@ class _EditTileState extends State<_EditTile> {
             onSubmitted: (v) {
               if (v.trim().isNotEmpty) widget.onConfirm(v.trim());
             },
-            style: GoogleFonts.notoSansJp(fontSize: 12, color: widget.c.text),
+            style: TextStyle(fontFamily: 'NotoSansJP',fontSize: 12, color: widget.c.text),
             decoration: InputDecoration(
               filled: true,
               fillColor: widget.c.input,
@@ -1083,11 +1083,11 @@ class _NoteList extends StatelessWidget {
             Expanded(
               child: TextField(
                 onChanged: onSearchChanged,
-                style: GoogleFonts.notoSansJp(fontSize: 13, color: c.text),
+                style: TextStyle(fontFamily: 'NotoSansJP',fontSize: 13, color: c.text),
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.search, size: 17, color: c.icon),
                   hintText: '検索',
-                  hintStyle: GoogleFonts.notoSansJp(
+                  hintStyle: TextStyle(fontFamily: 'NotoSansJP',
                       color: c.subtext, fontSize: 13),
                   filled: true,
                   fillColor: c.input,
@@ -1123,7 +1123,7 @@ class _NoteList extends StatelessWidget {
                   Icon(Icons.sort, size: 15, color: c.subtext),
                   const SizedBox(width: 3),
                   Text(_sortLabel(sort),
-                      style: GoogleFonts.notoSansJp(
+                      style: TextStyle(fontFamily: 'NotoSansJP',
                           fontSize: 11, color: c.subtext)),
                 ]),
               ),
@@ -1131,7 +1131,7 @@ class _NoteList extends StatelessWidget {
                   .map((s) => PopupMenuItem(
                       value: s,
                       child: Text(_sortLabel(s),
-                          style: GoogleFonts.notoSansJp(
+                          style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13, color: c.text))))
                   .toList(),
             ),
@@ -1152,7 +1152,7 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.upload_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('エクスポート',
-                          style: GoogleFonts.notoSansJp(
+                          style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13, color: c.text)),
                     ])),
                 PopupMenuItem(
@@ -1161,7 +1161,7 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.download_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('インポート',
-                          style: GoogleFonts.notoSansJp(
+                          style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13, color: c.text)),
                     ])),
                 PopupMenuItem(
@@ -1170,7 +1170,7 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.folder_zip_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('UpNoteインポート',
-                          style: GoogleFonts.notoSansJp(
+                          style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13, color: c.text)),
                     ])),
               ],
@@ -1184,7 +1184,7 @@ class _NoteList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(children: [
             Text('$count 件',
-                style: GoogleFonts.notoSansJp(
+                style: TextStyle(fontFamily: 'NotoSansJP',
                     fontSize: 11,
                     color: c.subtext,
                     fontWeight: FontWeight.w600)),
@@ -1195,7 +1195,7 @@ class _NoteList extends StatelessWidget {
                 icon: const Icon(Icons.delete_forever,
                     size: 13, color: Colors.red),
                 label: Text('すべて空にする',
-                    style: GoogleFonts.notoSansJp(
+                    style: TextStyle(fontFamily: 'NotoSansJP',
                         fontSize: 11,
                         color: Colors.red,
                         fontWeight: FontWeight.w600)),
@@ -1257,7 +1257,7 @@ class _NoteList extends StatelessWidget {
                         Expanded(
                           child: Text(
                             n.title.isEmpty ? '（タイトルなし）' : n.title,
-                            style: GoogleFonts.notoSansJp(
+                            style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color:
@@ -1285,7 +1285,7 @@ class _NoteList extends StatelessWidget {
                           Expanded(
                             child: Text(
                               preview,
-                              style: GoogleFonts.notoSansJp(
+                              style: TextStyle(fontFamily: 'NotoSansJP',
                                   fontSize: 11,
                                   color: c.subtext,
                                   height: 1.5),
@@ -1326,7 +1326,7 @@ class _NoteList extends StatelessWidget {
                         // Date
                         Text(
                           _fmtDate(n.updatedAt),
-                          style: GoogleFonts.notoSansJp(
+                          style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 10, color: c.subtext),
                         ),
                         // Tags
@@ -1343,7 +1343,7 @@ class _NoteList extends StatelessWidget {
                                   ),
                                   child: Text(
                                     '#${_tagName(id)}',
-                                    style: GoogleFonts.notoSansJp(
+                                    style: TextStyle(fontFamily: 'NotoSansJP',
                                         fontSize: 9,
                                         color: c.accent,
                                         fontWeight: FontWeight.w600),
@@ -1407,7 +1407,7 @@ class _TrashBtn extends StatelessWidget {
           decoration:
               BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5)),
           child: Text(label,
-              style: GoogleFonts.notoSansJp(
+              style: TextStyle(fontFamily: 'NotoSansJP',
                   fontSize: 10, color: color, fontWeight: FontWeight.w600)),
         ),
       );

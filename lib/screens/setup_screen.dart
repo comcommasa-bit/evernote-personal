@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../services/auth_service.dart';
 
 /// 初回起動時のセットアップ画面
@@ -298,7 +298,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   borderRadius: BorderRadius.circular(16)),
             ),
             child: Text('スキップ',
-                style: GoogleFonts.notoSansJp(
+                style: TextStyle(fontFamily: 'NotoSansJP',
                     color: const Color(0xFF777777),
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
