@@ -82,3 +82,5 @@ assets/
 
 - 2026-09-25 / AI(Claude): テーマに「ガラス」(`AppThemeMode.glass`) を追加。`AppColors` に `shadow` / `shadowBlur`（既定値は従来と同じ黒4%・blur4）を追加し、ノートカードの影に使用。変更ファイル: `lib/app_theme.dart`, `lib/main.dart`, `lib/screens/home_screen.dart`。この環境に Flutter SDK が無いためビルド未実施（ブランチ `claude/glass-morphism-mode-l49myu`）
 - 2026-09-25 / AI(Claude): ガラスモード時のみノートカードに背景ぼかし（`BackdropFilter`, sigma 12）を追加。`AppColors` に `blur`（既定0=無効、glassのみ12）を追加。変更ファイル: `lib/app_theme.dart`, `lib/screens/home_screen.dart`（`_glassBlur` 関数）。ビルド未実施（Flutter SDK 無し）
+- 2026-09-25 / AI(Claude): ガラスモードが実機で「ガラスに見えない」との指摘を受け強化。背景をパステル→鮮やかなグラデーション（インディゴ/紫/シアン）＋濃い色の玉に変更、パネルの白の不透明度を下げ（sidebar 30%, card 35%, header 25%）、blur 12→18。サイドバーとヘッダーバーにも `_glassBlur` を適用（`radius` 引数を追加）。変更ファイル: `lib/app_theme.dart`, `lib/screens/home_screen.dart`。ビルド未実施（Flutter SDK 無し）
+- 2026-09-25 / AI(Claude): 【確認した事実】Build 43 の APK は旧端末で「アプリはインストールされていません」となり上書き不可（Play プロテクトの警告の後）。別端末には新規インストールできた。`build.gradle.kts` の release は debug 署名、`pubspec.yaml` は `1.1.0+2` 固定。原因は署名鍵の不一致と推定（APK の署名は未比較）

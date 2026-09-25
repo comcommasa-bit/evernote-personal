@@ -17,11 +17,11 @@ import 'note_editor_screen.dart';
 
 const _uuid = Uuid();
 
-/// ガラスモード時のみノートカード内をすりガラス（背景ぼかし）にする
-Widget _glassBlur(AppColors c, Widget child) {
+/// ガラスモード時のみすりガラス（背景ぼかし）にする
+Widget _glassBlur(AppColors c, Widget child, {double radius = 11}) {
   if (c.blur <= 0) return child;
   return ClipRRect(
-    borderRadius: BorderRadius.circular(11),
+    borderRadius: BorderRadius.circular(radius),
     child: BackdropFilter(
       filter: ImageFilter.blur(sigmaX: c.blur, sigmaY: c.blur),
       child: child,
@@ -641,7 +641,7 @@ class _SidebarState extends State<_Sidebar> {
 
   @override
   Widget build(BuildContext ctx) {
-    return Container(
+    return _glassBlur(c, radius: 0, Container(
       width: 165,
       decoration: BoxDecoration(
         color: c.sidebar,
@@ -855,7 +855,7 @@ class _SidebarState extends State<_Sidebar> {
           ]),
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -1077,7 +1077,7 @@ class _NoteList extends StatelessWidget {
     return Expanded(
       child: Column(children: [
         // ─── Header bar (search + sort + menu) ───────────
-        Container(
+        _glassBlur(c, radius: 0, Container(
           height: 52,
           color: c.header,
           padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1191,7 +1191,7 @@ class _NoteList extends StatelessWidget {
               ],
             ),
           ]),
-        ),
+        )),
         Divider(height: 1, color: c.border),
 
         // ─── Count + New ───────────────────────────────
