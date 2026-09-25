@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-enum AppThemeMode { white, dark, purple, blue, orange }
+enum AppThemeMode { white, dark, purple, blue, orange, glass }
 
 class AppColors {
   final Color bg, sidebar, card, header, text, subtext;
   final Color accent, accentSoft, accentText;
   final Color border, active, activeText, input, icon;
+  final Color shadow;
+  final double shadowBlur;
 
   const AppColors({
     required this.bg, required this.sidebar, required this.card,
@@ -15,6 +17,7 @@ class AppColors {
     required this.accent, required this.accentSoft, required this.accentText,
     required this.border, required this.active, required this.activeText,
     required this.input, required this.icon,
+    this.shadow = const Color(0x0A000000), this.shadowBlur = 4,
   });
 }
 
@@ -65,6 +68,18 @@ class AppThemeData {
       active: Color(0xFFFDF0E6), activeText: Color(0xFFB05A18),
       input: Color(0xFFFDF0E6), icon: Color(0xFFB08060),
     ),
+    // ガラスモーフィズム: 半透明パネル + 白ハイライト枠 + 浮遊シャドウ
+    // 背景グラデーションは GlassBackground が描画する
+    AppThemeMode.glass: AppColors(
+      bg: Color(0x00000000), sidebar: Color(0x80FFFFFF),
+      card: Color(0x99FFFFFF), header: Color(0x8CFFFFFF),
+      text: Color(0xFF1E1B3A), subtext: Color(0xFF6B6F95),
+      accent: Color(0xFF5B5FEF), accentSoft: Color(0xB3E8E9FF),
+      accentText: Color(0xFFFFFFFF), border: Color(0xB3FFFFFF),
+      active: Color(0x99E0E3FF), activeText: Color(0xFF4338CA),
+      input: Color(0x80FFFFFF), icon: Color(0xFF6B6F95),
+      shadow: Color(0x265B5FEF), shadowBlur: 16,
+    ),
   };
 
   static AppColors of(AppThemeMode m) => themes[m]!;
@@ -79,10 +94,53 @@ class AppThemeData {
         brightness: m == AppThemeMode.dark ? Brightness.dark : Brightness.light,
         primary: c.accent, onPrimary: c.accentText,
         secondary: c.accent, onSecondary: c.accentText,
-        surface: c.card, onSurface: c.text,
+        // ガラスはダイアログ/メニューが透けないよう不透明面を使う
+        surface: m == AppThemeMode.glass ? const Color(0xFFF5F6FF) : c.card,
+        onSurface: c.text,
         error: Colors.red, onError: Colors.white,
       ),
     );
+  }
+}
+
+/// ガラスモード用の背景（パステルグラデーション + ぼかした色の玉）
+class GlassBackground extends StatelessWidget {
+  final Widget child;
+  const GlassBackground({super.key, required this.child});
+
+  static Widget _blob(Color color, double size) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [color, color.withAlpha(0)]),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      Positioned.fill(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFE3E9FF),
+                Color(0xFFF1E6FF),
+                Color(0xFFDDF4F1),
+              ],
+            ),
+          ),
+        ),
+      ),
+      Positioned(top: -80, left: -60, child: _blob(const Color(0x66A78BFA), 320)),
+      Positioned(top: 180, right: -90, child: _blob(const Color(0x5560A5FA), 300)),
+      Positioned(bottom: -60, left: 20, child: _blob(const Color(0x4D5EEAD4), 300)),
+      Positioned(bottom: 140, right: -40, child: _blob(const Color(0x40F9A8D4), 240)),
+      Positioned.fill(child: child),
+    ]);
   }
 }
 

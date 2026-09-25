@@ -400,6 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AppThemeMode.purple: 'パープル',
       AppThemeMode.blue: 'ブルー',
       AppThemeMode.orange: 'オレンジ',
+      AppThemeMode.glass: 'ガラス',
     };
     const themeColors = {
       AppThemeMode.white: Color(0xFF3D9970),
@@ -407,6 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AppThemeMode.purple: Color(0xFF7C5CBF),
       AppThemeMode.blue: Color(0xFF3D72B4),
       AppThemeMode.orange: Color(0xFFD4722A),
+      AppThemeMode.glass: Color(0xFF5B5FEF),
     };
     showDialog(
       context: context,
@@ -1239,9 +1241,9 @@ class _NoteList extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
+                      color: c.shadow,
+                      blurRadius: c.shadowBlur,
+                      offset: Offset(0, c.shadowBlur / 4),
                     )
                   ],
                 ),

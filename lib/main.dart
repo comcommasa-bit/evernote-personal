@@ -28,6 +28,9 @@ class App extends StatelessWidget {
       title: 'Evernote-personal',
       debugShowCheckedModeBanner: false,
       theme: AppThemeData.toMaterialTheme(themeNotifier.mode),
+      builder: (context, child) => themeNotifier.mode == AppThemeMode.glass
+          ? GlassBackground(child: child ?? const SizedBox.shrink())
+          : child ?? const SizedBox.shrink(),
       home: const RootPage(),
     );
   }

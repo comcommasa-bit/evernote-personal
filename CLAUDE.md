@@ -20,7 +20,7 @@ Evernoteライクな個人用メモアプリ。紫のカバ（hippo）をマス�
 ```
 lib/
   main.dart              # エントリポイント、RootPage（ロック制御）
-  app_theme.dart         # AppThemeMode, AppColors, ThemeNotifier（5テーマ対応）
+  app_theme.dart         # AppThemeMode, AppColors, ThemeNotifier, GlassBackground（6テーマ対応）
   database/
     db_helper.dart       # DbHelper シングルトン（folders, tags, notes CRUD）
   models/
@@ -47,12 +47,13 @@ assets/
 
 ## テーマシステム
 
-5種類のテーマ（`AppThemeMode`）:
+6種類のテーマ（`AppThemeMode`）:
 - **white**: デフォルト、緑アクセント
 - **dark**: ダークモード、緑アクセント
 - **purple**: 紫アクセント
 - **blue**: 青アクセント
 - **orange**: オレンジアクセント
+- **glass**: ガラスモーフィズム。半透明パネル＋白ハイライト枠＋浮遊シャドウ、インディゴアクセント。背景は `main.dart` の `MaterialApp.builder` で `GlassBackground`（パステルグラデーション＋色の玉）を敷く。`bg` は透明。ダイアログ/メニューは `colorScheme.surface` を不透明にして透けないようにしている
 
 `ThemeNotifier.setMode()` で切り替え。全画面で `ctx.watch<ThemeNotifier>().colors` を使用。
 
@@ -76,3 +77,7 @@ assets/
 - テーマカラーは `AppColors` の各プロパティを使い、ハードコードしない
 - `WillPopScope` で編集画面離脱時に自動保存
 - フォントは NotoSansJP を使用
+
+## 変更履歴
+
+- 2026-09-25 / AI(Claude): テーマに「ガラス」(`AppThemeMode.glass`) を追加。`AppColors` に `shadow` / `shadowBlur`（既定値は従来と同じ黒4%・blur4）を追加し、ノートカードの影に使用。変更ファイル: `lib/app_theme.dart`, `lib/main.dart`, `lib/screens/home_screen.dart`。この環境に Flutter SDK が無いためビルド未実施（ブランチ `claude/glass-morphism-mode-l49myu`）
