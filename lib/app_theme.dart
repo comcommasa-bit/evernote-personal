@@ -10,6 +10,7 @@ class AppColors {
   final Color border, active, activeText, input, icon;
   final Color shadow;
   final double shadowBlur;
+  final double blur;
 
   const AppColors({
     required this.bg, required this.sidebar, required this.card,
@@ -18,6 +19,7 @@ class AppColors {
     required this.border, required this.active, required this.activeText,
     required this.input, required this.icon,
     this.shadow = const Color(0x0A000000), this.shadowBlur = 4,
+    this.blur = 0,
   });
 }
 
@@ -78,7 +80,7 @@ class AppThemeData {
       accentText: Color(0xFFFFFFFF), border: Color(0xB3FFFFFF),
       active: Color(0x99E0E3FF), activeText: Color(0xFF4338CA),
       input: Color(0x80FFFFFF), icon: Color(0xFF6B6F95),
-      shadow: Color(0x265B5FEF), shadowBlur: 16,
+      shadow: Color(0x265B5FEF), shadowBlur: 16, blur: 12,
     ),
   };
 

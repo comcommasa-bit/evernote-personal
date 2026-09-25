@@ -81,3 +81,4 @@ assets/
 ## 変更履歴
 
 - 2026-09-25 / AI(Claude): テーマに「ガラス」(`AppThemeMode.glass`) を追加。`AppColors` に `shadow` / `shadowBlur`（既定値は従来と同じ黒4%・blur4）を追加し、ノートカードの影に使用。変更ファイル: `lib/app_theme.dart`, `lib/main.dart`, `lib/screens/home_screen.dart`。この環境に Flutter SDK が無いためビルド未実施（ブランチ `claude/glass-morphism-mode-l49myu`）
+- 2026-09-25 / AI(Claude): ガラスモード時のみノートカードに背景ぼかし（`BackdropFilter`, sigma 12）を追加。`AppColors` に `blur`（既定0=無効、glassのみ12）を追加。変更ファイル: `lib/app_theme.dart`, `lib/screens/home_screen.dart`（`_glassBlur` 関数）。ビルド未実施（Flutter SDK 無し）

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -15,6 +16,18 @@ import '../services/upnote_importer.dart';
 import 'note_editor_screen.dart';
 
 const _uuid = Uuid();
+
+/// ガラスモード時のみノートカード内をすりガラス（背景ぼかし）にする
+Widget _glassBlur(AppColors c, Widget child) {
+  if (c.blur <= 0) return child;
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(11),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: c.blur, sigmaY: c.blur),
+      child: child,
+    ),
+  );
+}
 
 /// ブロック形式のbodyからプレビュー用のプレーンテキストを抽出
 String _extractBodyPreview(String body) {
@@ -1247,7 +1260,7 @@ class _NoteList extends StatelessWidget {
                     )
                   ],
                 ),
-                child: Padding(
+                child: _glassBlur(c, Padding(
                   padding: const EdgeInsets.all(11),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1373,7 +1386,7 @@ class _NoteList extends StatelessWidget {
                       ],
                     ),
                   ]),
-                ),
+                )),
               ),
             );
           },
