@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -15,6 +16,18 @@ import '../services/upnote_importer.dart';
 import 'note_editor_screen.dart';
 
 const _uuid = Uuid();
+
+/// ガラスモード時のみノートカード内をすりガラス（背景ぼかし）にする
+Widget _glassBlur(AppColors c, Widget child) {
+  if (c.blur <= 0) return child;
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(11),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: c.blur, sigmaY: c.blur),
+      child: child,
+    ),
+  );
+}
 
 /// ブロック形式のbodyからプレビュー用のプレーンテキストを抽出
 String _extractBodyPreview(String body) {
@@ -400,6 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AppThemeMode.purple: 'パープル',
       AppThemeMode.blue: 'ブルー',
       AppThemeMode.orange: 'オレンジ',
+      AppThemeMode.glass: 'ガラス',
     };
     const themeColors = {
       AppThemeMode.white: Color(0xFF3D9970),
@@ -407,6 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AppThemeMode.purple: Color(0xFF7C5CBF),
       AppThemeMode.blue: Color(0xFF3D72B4),
       AppThemeMode.orange: Color(0xFFD4722A),
+      AppThemeMode.glass: Color(0xFF5B5FEF),
     };
     showDialog(
       context: context,
@@ -1239,13 +1254,13 @@ class _NoteList extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
+                      color: c.shadow,
+                      blurRadius: c.shadowBlur,
+                      offset: Offset(0, c.shadowBlur / 4),
                     )
                   ],
                 ),
-                child: Padding(
+                child: _glassBlur(c, Padding(
                   padding: const EdgeInsets.all(11),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1371,7 +1386,7 @@ class _NoteList extends StatelessWidget {
                       ],
                     ),
                   ]),
-                ),
+                )),
               ),
             );
           },
