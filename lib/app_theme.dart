@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 enum AppThemeMode { white, dark, purple, blue, orange, glass }
@@ -70,17 +71,17 @@ class AppThemeData {
       active: Color(0xFFFDF0E6), activeText: Color(0xFFB05A18),
       input: Color(0xFFFDF0E6), icon: Color(0xFFB08060),
     ),
-    // ガラスモーフィズム: 半透明パネル + 白ハイライト枠 + 浮遊シャドウ
+    // ガラスモーフィズム: 濃い鮮やかな背景の上に白の半透明すりガラスパネル
     // 背景グラデーションは GlassBackground が描画する
     AppThemeMode.glass: AppColors(
-      bg: Color(0x00000000), sidebar: Color(0x80FFFFFF),
-      card: Color(0x99FFFFFF), header: Color(0x8CFFFFFF),
-      text: Color(0xFF1E1B3A), subtext: Color(0xFF6B6F95),
-      accent: Color(0xFF5B5FEF), accentSoft: Color(0xB3E8E9FF),
-      accentText: Color(0xFFFFFFFF), border: Color(0xB3FFFFFF),
-      active: Color(0x99E0E3FF), activeText: Color(0xFF4338CA),
-      input: Color(0x80FFFFFF), icon: Color(0xFF6B6F95),
-      shadow: Color(0x265B5FEF), shadowBlur: 16, blur: 12,
+      bg: Color(0x00000000), sidebar: Color(0x1FFFFFFF),
+      card: Color(0x26FFFFFF), header: Color(0x1AFFFFFF),
+      text: Color(0xFFFFFFFF), subtext: Color(0xB3FFFFFF),
+      accent: Color(0xFF7C83FF), accentSoft: Color(0x40FFFFFF),
+      accentText: Color(0xFFFFFFFF), border: Color(0x4DFFFFFF),
+      active: Color(0x33FFFFFF), activeText: Color(0xFFFFFFFF),
+      input: Color(0x26FFFFFF), icon: Color(0xD9FFFFFF),
+      shadow: Color(0x40000000), shadowBlur: 24, blur: 20,
     ),
   };
 
@@ -93,11 +94,13 @@ class AppThemeData {
       scaffoldBackgroundColor: c.bg,
       fontFamily: 'NotoSansJP',
       colorScheme: ColorScheme(
-        brightness: m == AppThemeMode.dark ? Brightness.dark : Brightness.light,
+        brightness: (m == AppThemeMode.dark || m == AppThemeMode.glass)
+            ? Brightness.dark
+            : Brightness.light,
         primary: c.accent, onPrimary: c.accentText,
         secondary: c.accent, onSecondary: c.accentText,
         // ガラスはダイアログ/メニューが透けないよう不透明面を使う
-        surface: m == AppThemeMode.glass ? const Color(0xFFF5F6FF) : c.card,
+        surface: m == AppThemeMode.glass ? const Color(0xFF2A2656) : c.card,
         onSurface: c.text,
         error: Colors.red, onError: Colors.white,
       ),
@@ -105,7 +108,7 @@ class AppThemeData {
   }
 }
 
-/// ガラスモード用の背景（パステルグラデーション + ぼかした色の玉）
+/// ガラスモード用の背景（濃いグラデーション + 鮮やかな色の玉）
 class GlassBackground extends StatelessWidget {
   final Widget child;
   const GlassBackground({super.key, required this.child});
@@ -121,28 +124,32 @@ class GlassBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      Positioned.fill(
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFE3E9FF),
-                Color(0xFFF1E6FF),
-                Color(0xFFDDF4F1),
-              ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // 暗い背景なのでステータスバーのアイコンを白にする
+      value: SystemUiOverlayStyle.light,
+      child: Stack(children: [
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1E1B4B),
+                  Color(0xFF3B0764),
+                  Color(0xFF0C4A6E),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      Positioned(top: -80, left: -60, child: _blob(const Color(0x66A78BFA), 320)),
-      Positioned(top: 180, right: -90, child: _blob(const Color(0x5560A5FA), 300)),
-      Positioned(bottom: -60, left: 20, child: _blob(const Color(0x4D5EEAD4), 300)),
-      Positioned(bottom: 140, right: -40, child: _blob(const Color(0x40F9A8D4), 240)),
-      Positioned.fill(child: child),
-    ]);
+        Positioned(top: -60, left: -80, child: _blob(const Color(0xE6EC4899), 340)),
+        Positioned(top: 200, right: -100, child: _blob(const Color(0xCC8B5CF6), 340)),
+        Positioned(bottom: -40, left: -20, child: _blob(const Color(0xB306B6D4), 320)),
+        Positioned(bottom: 180, right: -30, child: _blob(const Color(0x99F97316), 240)),
+        Positioned.fill(child: child),
+      ]),
+    );
   }
 }
 

@@ -53,7 +53,7 @@ assets/
 - **purple**: 紫アクセント
 - **blue**: 青アクセント
 - **orange**: オレンジアクセント
-- **glass**: ガラスモーフィズム。半透明パネル＋白ハイライト枠＋浮遊シャドウ、インディゴアクセント。背景は `main.dart` の `MaterialApp.builder` で `GlassBackground`（パステルグラデーション＋色の玉）を敷く。`bg` は透明。ダイアログ/メニューは `colorScheme.surface` を不透明にして透けないようにしている
+- **glass**: ガラスモーフィズム。濃い紺〜紫〜青のグラデーション背景＋鮮やかな色の玉（ピンク/紫/シアン/オレンジ）の上に、白12〜25%の半透明パネル＋背景ぼかし（sidebar・ヘッダー・ノートカード、sigma 20）、白文字。背景は `main.dart` の `MaterialApp.builder` で `GlassBackground` を敷く。`bg` は透明。ダイアログ/メニューは `colorScheme.surface` を不透明の濃紺(0xFF2A2656)にして透けないようにしている。ステータスバーアイコンは白
 
 `ThemeNotifier.setMode()` で切り替え。全画面で `ctx.watch<ThemeNotifier>().colors` を使用。
 
@@ -82,3 +82,4 @@ assets/
 
 - 2026-09-25 / AI(Claude): テーマに「ガラス」(`AppThemeMode.glass`) を追加。`AppColors` に `shadow` / `shadowBlur`（既定値は従来と同じ黒4%・blur4）を追加し、ノートカードの影に使用。変更ファイル: `lib/app_theme.dart`, `lib/main.dart`, `lib/screens/home_screen.dart`。この環境に Flutter SDK が無いためビルド未実施（ブランチ `claude/glass-morphism-mode-l49myu`）
 - 2026-09-25 / AI(Claude): ガラスモード時のみノートカードに背景ぼかし（`BackdropFilter`, sigma 12）を追加。`AppColors` に `blur`（既定0=無効、glassのみ12）を追加。変更ファイル: `lib/app_theme.dart`, `lib/screens/home_screen.dart`（`_glassBlur` 関数）。ビルド未実施（Flutter SDK 無し）
+- 2026-09-25 / AI(Claude): ガラスモードが実機で白っぽく見えガラス感が無かったため配色を全面変更。背景を濃いグラデーション＋鮮やかな色の玉に、パネルを白12〜25%の半透明＋白文字に、ぼかしを sigma 20 に強化し、サイドバーとヘッダーにもぼかしを追加。ダイアログ面を濃紺、glass時の brightness を dark、ステータスバーアイコンを白に。変更ファイル: `lib/app_theme.dart`, `lib/screens/home_screen.dart`。ビルド未実施（Flutter SDK 無し）。ブランチ `claude/awesome-noether-5thbwf`
