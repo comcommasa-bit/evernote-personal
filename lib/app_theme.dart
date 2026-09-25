@@ -73,14 +73,14 @@ class AppThemeData {
     // ガラスモーフィズム: 半透明パネル + 白ハイライト枠 + 浮遊シャドウ
     // 背景グラデーションは GlassBackground が描画する
     AppThemeMode.glass: AppColors(
-      bg: Color(0x00000000), sidebar: Color(0x4DFFFFFF),
-      card: Color(0x59FFFFFF), header: Color(0x40FFFFFF),
-      text: Color(0xFF1E1B3A), subtext: Color(0xFF4A4E78),
-      accent: Color(0xFF5B5FEF), accentSoft: Color(0x99FFFFFF),
-      accentText: Color(0xFFFFFFFF), border: Color(0xCCFFFFFF),
-      active: Color(0x80FFFFFF), activeText: Color(0xFF4338CA),
-      input: Color(0x59FFFFFF), icon: Color(0xFF4A4E78),
-      shadow: Color(0x401E1B3A), shadowBlur: 20, blur: 18,
+      bg: Color(0x00000000), sidebar: Color(0x33FFFFFF),
+      card: Color(0x2EFFFFFF), header: Color(0x33FFFFFF),
+      text: Color(0xFF1E1B3A), subtext: Color(0xFF45496E),
+      accent: Color(0xFF5B5FEF), accentSoft: Color(0x59E8E9FF),
+      accentText: Color(0xFFFFFFFF), border: Color(0x99FFFFFF),
+      active: Color(0x4DFFFFFF), activeText: Color(0xFF3730A3),
+      input: Color(0x40FFFFFF), icon: Color(0xFF45496E),
+      shadow: Color(0x265B5FEF), shadowBlur: 16, blur: 12,
     ),
   };
 
@@ -105,7 +105,7 @@ class AppThemeData {
   }
 }
 
-/// ガラスモード用の背景（鮮やかなグラデーション + ぼかした色の玉）
+/// ガラスモード用の背景（パステルグラデーション + ぼかした色の玉）
 class GlassBackground extends StatelessWidget {
   final Widget child;
   const GlassBackground({super.key, required this.child});
@@ -129,18 +129,18 @@ class GlassBackground extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF818CF8),
-                Color(0xFFC084FC),
-                Color(0xFF22D3EE),
+                Color(0xFFC9CFF7),
+                Color(0xFFDCC8F4),
+                Color(0xFFBFE6E2),
               ],
             ),
           ),
         ),
       ),
-      Positioned(top: -100, left: -80, child: _blob(const Color(0xE67C3AED), 380)),
-      Positioned(top: 160, right: -120, child: _blob(const Color(0xCCEC4899), 360)),
-      Positioned(bottom: -80, left: -40, child: _blob(const Color(0xCC06B6D4), 380)),
-      Positioned(bottom: 180, right: -60, child: _blob(const Color(0xB33B82F6), 300)),
+      Positioned(top: -90, left: -90, child: _blob(const Color(0xF27B6CF6), 380)),
+      Positioned(top: 170, right: -110, child: _blob(const Color(0xE64FD1C5), 360)),
+      Positioned(bottom: 60, left: -80, child: _blob(const Color(0xE6F59AC4), 340)),
+      Positioned(bottom: -90, right: -50, child: _blob(const Color(0xE66AA8FF), 320)),
       Positioned.fill(child: child),
     ]);
   }
