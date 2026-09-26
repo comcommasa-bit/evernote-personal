@@ -36,8 +36,25 @@ jobs:
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
+      - name: Set up signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Secrets KEYSTORE_BASE64 / KEYSTORE_PASSWORD が未設定です"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+          {
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=evernote"
+            echo "storeFile=release.jks"
+          } > android/key.properties
+
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ github.run_number }}
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Evernote-personal-v${{ github.run_number }}.apk
