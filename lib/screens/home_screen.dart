@@ -4,7 +4,6 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../app_theme.dart';
@@ -12,6 +11,7 @@ import '../database/db_helper.dart';
 import '../models/note.dart';
 import '../models/folder.dart';
 import '../models/tag.dart';
+import '../services/backup_service.dart';
 import '../services/upnote_importer.dart';
 import 'note_editor_screen.dart';
 
@@ -234,8 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
       title: 'エクスポートとは？',
       icon: Icons.upload_outlined,
       steps: const [
-        'ノート・フォルダ・タグをすべてJSONファイルに保存します。',
-        '保存先はアプリ内ドキュメントフォルダです。',
+        'ノート・フォルダ・タグ・画像を1つのZIPファイルにまとめます。',
+        '次の画面で保存先（ダウンロードなど）を選んでください。',
         'バックアップや機種変更のデータ移行に使えます。',
         '「インポート」で同じ端末や別の端末に復元できます。',
       ],
@@ -243,18 +243,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (proceed != true) return;
     try {
-      final data = await _db.exportAll();
-      final json = const JsonEncoder.withIndent('  ').convert(data);
-      final dir = await getApplicationDocumentsDirectory();
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      final path = '${dir.path}/evernote_backup_$ts.json';
-      await File(path).writeAsString(json);
-      if (!mounted) return;
+      final zip = await BackupService().buildZip();
+      final now = DateTime.now();
+      String two(int v) => v.toString().padLeft(2, '0');
+      final fileName = 'evernote_backup_${now.year}${two(now.month)}'
+          '${two(now.day)}_${two(now.hour)}${two(now.minute)}.zip';
+      final saved = await FilePicker.platform.saveFile(
+        fileName: fileName,
+        type: FileType.any,
+        bytes: zip.bytes,
+      );
+      if (saved == null || !mounted) return;
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('エクスポート完了'),
-          content: Text('保存先:\n$path'),
+          content: Text(
+              '$fileName\nノート ${zip.notes} 件、画像 ${zip.images} 枚を保存しました'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -310,10 +315,10 @@ class _HomeScreenState extends State<HomeScreen> {
       title: 'インポートとは？',
       icon: Icons.download_outlined,
       steps: const [
-        'このアプリの「エクスポート」で作ったJSONファイルを読み込みます。',
-        'フォルダ・タグ・ノートがすべて復元されます。',
+        'このアプリの「エクスポート」で作ったZIPファイルを読み込みます。',
+        'フォルダ・タグ・ノート・画像がすべて復元されます。',
         '既存のデータと重複する場合は上書きされます。',
-        'ファイルマネージャーで保存先のJSONを選択してください。',
+        '以前のJSON形式のバックアップも読み込めます（画像は含まれません）。',
       ],
       proceedLabel: 'ファイルを選択する',
     );
@@ -321,17 +326,24 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['zip', 'json'],
       );
       if (result == null || result.files.single.path == null) return;
-      final file = File(result.files.single.path!);
-      final json = await file.readAsString();
-      final data = jsonDecode(json) as Map<String, dynamic>;
-      await _db.importAll(data);
+      final path = result.files.single.path!;
+      String message;
+      if (path.toLowerCase().endsWith('.zip')) {
+        final r = await BackupService().importZip(path);
+        message = 'ノート ${r.notes} 件、画像 ${r.images} 枚をインポートしました';
+      } else {
+        final json = await File(path).readAsString();
+        final data = jsonDecode(json) as Map<String, dynamic>;
+        await _db.importAll(data);
+        message = 'インポートが完了しました';
+      }
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('インポートが完了しました')));
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

@@ -66,7 +66,7 @@ assets/
 - 検索: タイトル + 本文の部分一致
 - ソート: 更新日 / 作成日 / 名前 / タグ
 - 画像添付: image_picker でギャラリーから選択、サムネイル表示
-- エクスポート / インポート: JSON形式の全データバックアップ
+- エクスポート / インポート: ZIP形式（`data.json` + `images/`）の全データバックアップ。保存先は保存ダイアログで選択。旧JSON形式のインポートも可（`lib/services/backup_service.dart`）
 
 ## 開発ガイドライン
 
@@ -88,3 +88,4 @@ assets/
 - 2026-09-26 / AI(Claude): 署名鍵の固定。`android/app/build.gradle.kts` に release 用 signingConfig を追加（`android/key.properties` があれば固定鍵、無ければ debug 鍵）。`.github/workflows/build-apk.yml` に GitHub Secrets `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` から `android/app/release.jks` と `android/key.properties` を生成する手順を追加（未設定ならビルド失敗）。versionCode は `--build-number=${{ github.run_number }}` で毎回増える。鍵: alias `evernote`、JKS、SHA-256 `3C:CB:A5:51:A8:4D:1E:3A:49:FC:37:8A:F8:A8:6F:36:93:C1:C6:AB:F4:90:FC:14:4B:9B:47:DA:26:42:92:D0`。鍵ファイルはリポジトリに入れない（`android/.gitignore` で除外済み）。ビルド未実施（Secrets 登録待ち）
 - 2026-09-26 / AI(Claude): 【エラー記録】PR #7 マージ後の Build APK（run 45）が失敗。ログ上 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` が空で「Secrets 未設定」エラーにより停止（Flutter ビルドまで到達せず）。Secrets の登録場所・名前の確認待ち
 - 2026-09-26 / AI(Claude): Secrets 登録後、Build APK（run 46, workflow_dispatch, main）成功。Release `build-46` に `Evernote-personal-v46.apk` を確認。以降は固定鍵で署名される（APK の署名は未検証、実機インストール未確認）
+- 2026-09-26 / AI(Claude): 写真も含むエクスポート/インポート。新規 `lib/services/backup_service.dart`（ZIP作成・復元、画像パスを ZIP 内相対パス⇔端末パスに書き換え。`image_paths` と本文ブロックの `imagePath` 両方）。`lib/screens/home_screen.dart` の `_exportData` を ZIP＋`FilePicker.saveFile`（保存先をユーザーが選択）に、`_importData` を ZIP/JSON 両対応に変更、未使用になった `path_provider` の import を削除。Flutter 3.41.4 SDK をこの環境に取得し `flutter analyze` 実施: エラー0、info 24件（変更前と同数）。APK ビルド・実機動作は未確認
