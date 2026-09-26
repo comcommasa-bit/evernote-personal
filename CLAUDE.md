@@ -90,3 +90,4 @@ assets/
 - 2026-09-26 / AI(Claude): Secrets 登録後、Build APK（run 46, workflow_dispatch, main）成功。Release `build-46` に `Evernote-personal-v46.apk` を確認。以降は固定鍵で署名される（APK の署名は未検証、実機インストール未確認）
 - 2026-09-26 / AI(Claude): 写真も含むエクスポート/インポート。新規 `lib/services/backup_service.dart`（ZIP作成・復元、画像パスを ZIP 内相対パス⇔端末パスに書き換え。`image_paths` と本文ブロックの `imagePath` 両方）。`lib/screens/home_screen.dart` の `_exportData` を ZIP＋`FilePicker.saveFile`（保存先をユーザーが選択）に、`_importData` を ZIP/JSON 両対応に変更、未使用になった `path_provider` の import を削除。Flutter 3.41.4 SDK をこの環境に取得し `flutter analyze` 実施: エラー0、info 24件（変更前と同数）。APK ビルド・実機動作は未確認
 - 2026-09-26 / AI(Claude): PR #8 マージ後の Build APK（run 47）成功。Release `build-47` に `Evernote-personal-v47.apk` を確認。Build 46 からの上書き更新・エクスポート/インポートの実機動作は未確認
+- 2026-09-26 / AI(Claude): ユーザー報告「できたようにおもう」（Build 47 の上書き更新・エクスポート/インポート。項目ごとの結果は未取得）
