@@ -38,6 +38,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // OneNote 連携のログイン後に戻るための URI スキーム（flutter_appauth）
+        manifestPlaceholders.putAll(
+            mapOf("appAuthRedirectScheme" to "com.hippo.evernotepersonal")
+        )
     }
 
     signingConfigs {

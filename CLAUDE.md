@@ -13,7 +13,8 @@ Evernoteライクな個人用メモアプリ。紫のカバ（hippo）をマス�
 - **状態管理**: Provider (`ChangeNotifierProvider` + `ThemeNotifier`)
 - **DB**: sqflite（ローカルSQLite）
 - **認証**: local_auth（生体認証）、flutter_secure_storage（パスワード保存）
-- **その他**: uuid, image_picker, path_provider
+- **その他**: uuid, image_picker, path_provider, file_picker, archive
+- **OneNote連携**: flutter_appauth（Microsoft ID プラットフォーム OAuth2+PKCE）, http（Microsoft Graph）
 
 ## ディレクトリ構成
 
@@ -31,6 +32,13 @@ lib/
     lock_screen.dart     # パスワード入力 + 指紋認証
     home_screen.dart     # サイドバー + ノート一覧（検索、ソート、フォルダ/タグ管理）
     note_editor_screen.dart  # ノート編集（タイトル、本文、タグ、画像、ピン留め）
+    setup_screen.dart    # 初回セットアップ
+    onenote_screen.dart  # OneNote のセクションを選んで取り込む
+  services/
+    auth_service.dart    # パスワード・生体認証
+    backup_service.dart  # ZIP エクスポート/インポート
+    upnote_importer.dart # UpNote ZIP 取り込み
+    onenote_service.dart # OneNote（Microsoft Graph）ログイン・取り込み
 assets/
   images/
     hippo.png            # アプリアイコン（紫カバ）
@@ -66,6 +74,7 @@ assets/
 - 検索: タイトル + 本文の部分一致
 - ソート: 更新日 / 作成日 / 名前 / タグ
 - 画像添付: image_picker でギャラリーから選択、サムネイル表示
+- OneNote 取り込み: Microsoft アカウントでサインイン → ノートブック → セクションを選び全ページを取り込み（セクション名のフォルダへ。ノートID `onenote_<ページID>` で再取り込みは上書き）。Entra アプリ登録: クライアントID `4a6d228b-a518-4f92-8688-5da6dab2eced`、リダイレクトURI `com.hippo.evernotepersonal://auth`（パブリッククライアント）
 - エクスポート / インポート: ZIP形式（`data.json` + `images/`）の全データバックアップ。保存先は保存ダイアログで選択。旧JSON形式のインポートも可（`lib/services/backup_service.dart`）
 
 ## 開発ガイドライン
@@ -89,3 +98,6 @@ assets/
 - 2026-09-26 / AI(Claude): 【エラー記録】PR #7 マージ後の Build APK（run 45）が失敗。ログ上 `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` が空で「Secrets 未設定」エラーにより停止（Flutter ビルドまで到達せず）。Secrets の登録場所・名前の確認待ち
 - 2026-09-26 / AI(Claude): Secrets 登録後、Build APK（run 46, workflow_dispatch, main）成功。Release `build-46` に `Evernote-personal-v46.apk` を確認。以降は固定鍵で署名される（APK の署名は未検証、実機インストール未確認）
 - 2026-09-26 / AI(Claude): 写真も含むエクスポート/インポート。新規 `lib/services/backup_service.dart`（ZIP作成・復元、画像パスを ZIP 内相対パス⇔端末パスに書き換え。`image_paths` と本文ブロックの `imagePath` 両方）。`lib/screens/home_screen.dart` の `_exportData` を ZIP＋`FilePicker.saveFile`（保存先をユーザーが選択）に、`_importData` を ZIP/JSON 両対応に変更、未使用になった `path_provider` の import を削除。Flutter 3.41.4 SDK をこの環境に取得し `flutter analyze` 実施: エラー0、info 24件（変更前と同数）。APK ビルド・実機動作は未確認
+- 2026-09-26 / AI(Claude): PR #8 マージ後の Build APK（run 47）成功。Release `build-47` に `Evernote-personal-v47.apk` を確認。Build 46 からの上書き更新・エクスポート/インポートの実機動作は未確認
+- 2026-09-26 / AI(Claude): ユーザー報告「できたようにおもう」（Build 47 の上書き更新・エクスポート/インポート。項目ごとの結果は未取得）
+- 2026-09-26 / AI(Claude): OneNote 取り込み（第1段階: OneNote→アプリのみ）。新規 `lib/services/onenote_service.dart`（サインイン/トークン更新、ノートブック・セクション・ページ取得、ページHTMLをブロック形式に変換: p/h→テキスト、to-do タグ→チェックボックス、ol→番号付きリスト、ul→「・」付きテキスト、table→「 | 」区切りテキスト、img→画像をダウンロードして画像ブロック）、新規 `lib/screens/onenote_screen.dart`、`home_screen.dart` のメニューに「OneNoteから取り込む」追加。`pubspec.yaml` に flutter_appauth ^12.1.0 / http ^1.6.0 追加（`pubspec.lock` 更新、未使用の google_fonts の古いエントリも pub get で消えた）。`build.gradle.kts` に `appAuthRedirectScheme` を追加。`AndroidManifest.xml`（main）に INTERNET 権限を追加（従来 debug/profile にしか無かった）、flutter_appauth の README に従い `android:taskAffinity=""` を削除。リダイレクトURIのスキームに `_` は使えない（RFC 3986）ため `evernotepersonal` とした。`flutter analyze`: エラー0、info 24件（変更前と同数）。ビルド・実機未確認
