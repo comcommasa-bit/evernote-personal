@@ -14,6 +14,7 @@ import '../models/tag.dart';
 import '../services/backup_service.dart';
 import '../services/upnote_importer.dart';
 import 'note_editor_screen.dart';
+import 'onenote_screen.dart';
 
 const _uuid = Uuid();
 
@@ -310,6 +311,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _importOneNote() async {
+    final imported = await Navigator.push<bool>(
+        context, MaterialPageRoute(builder: (_) => const OneNoteScreen()));
+    if (imported == true) await _load();
+  }
+
   Future<void> _importData() async {
     final proceed = await _showTutorial(
       title: 'インポートとは？',
@@ -592,6 +599,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onExport: _exportData,
             onImport: _importData,
             onImportUpNote: _importUpNote,
+            onImportOneNote: _importOneNote,
           ),
         ]),
       ),
@@ -1054,6 +1062,7 @@ class _NoteList extends StatelessWidget {
   final VoidCallback onExport;
   final VoidCallback onImport;
   final VoidCallback onImportUpNote;
+  final VoidCallback onImportOneNote;
 
   const _NoteList({
     required this.colors,
@@ -1076,6 +1085,7 @@ class _NoteList extends StatelessWidget {
     required this.onExport,
     required this.onImport,
     required this.onImportUpNote,
+    required this.onImportOneNote,
   });
 
   AppColors get c => colors;
@@ -1171,6 +1181,7 @@ class _NoteList extends StatelessWidget {
                 if (v == 'export') onExport();
                 if (v == 'import') onImport();
                 if (v == 'import_upnote') onImportUpNote();
+                if (v == 'import_onenote') onImportOneNote();
               },
               itemBuilder: (_) => [
                 PopupMenuItem(
@@ -1197,6 +1208,16 @@ class _NoteList extends StatelessWidget {
                       Icon(Icons.folder_zip_outlined, size: 16, color: c.icon),
                       const SizedBox(width: 8),
                       Text('UpNoteインポート',
+                          style: TextStyle(fontFamily: 'NotoSansJP',
+                              fontSize: 13, color: c.text)),
+                    ])),
+                PopupMenuItem(
+                    value: 'import_onenote',
+                    child: Row(children: [
+                      Icon(Icons.cloud_download_outlined,
+                          size: 16, color: c.icon),
+                      const SizedBox(width: 8),
+                      Text('OneNoteから取り込む',
                           style: TextStyle(fontFamily: 'NotoSansJP',
                               fontSize: 13, color: c.text)),
                     ])),
